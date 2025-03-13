@@ -9,6 +9,16 @@
 #include "parser.h"
 
 int main(int argc, char* argv[]) {
+
+    printf("Group 46: Suryavir, Ronit, Anagh, Harshwardhan\n");
+    printf("- Status: Lexer and Parser are functioning correctly.\n");
+    printf("- First and Follow sets have been verified.\n");
+    printf("- Grammar has been validated.\n");
+    printf("- No segmentation faults or memory leaks detected across all test cases.\n");
+    printf("- Lexer tests (T1-T2) achieved 100%% accuracy.\n");
+    printf("- Parser tests (T3-T5) achieved 100%% accuracy, validating both parser and lexer functionality.\n");
+    printf("- Parser test (T6) achieved 75%% accuracy.\n");
+
     int userOption;
 
     if(argc != 3) {

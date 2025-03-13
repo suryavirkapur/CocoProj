@@ -8,20 +8,15 @@
 #include "parser.h"
 #include "lexer.h"
 
-#define GRAMMAR_FILE "GRAMMAR.txt"
-#define TOTAL_GRAMMAR_NONTERMINALS 54
-#define TOTAL_GRAMMAR_TERMINALS 61
-#define TOTAL_GRAMMAR_RULES 96
+#include "constants.h"
 
 Grammar* g;
 NonTerminalRuleRecords** ntrr;
-int checkIfDone[TOTAL_GRAMMAR_NONTERMINALS] = {0};
-int vectorSize = TOTAL_GRAMMAR_TERMINALS+1;
+int checkIfDone[NUM_NONTERMINALS] = {0};
+int vectorSize = NUM_TERMINALS+1;
 
 int syntaxErrorFlag;
 int lexicalErrorFlag;
-
-
 
 char* TerminalID[] = {
     "TK_ASSIGNOP",    // <---
@@ -98,26 +93,26 @@ char* NonTerminalID[] = {
     "dataType",
     "primitiveDatatype",
     "constructedDatatype",
-    "remaining_list",
-    "stmts",
+    "moreParameters",
+    "statementSequence",
     "typeDefinitions",
     "actualOrRedefined",
     "typeDefinition",
     "fieldDefinitions",
     "fieldDefinition",
-    "fieldType",
-    "moreFields",
+    "fieldDataType",
+    "remainingFields",
     "declarations",
     "declaration",
-    "global_or_not",
+    "globalSpecifier",
     "otherStmts",
-    "stmt",
+    "statement",
     "assignmentStmt",
     "singleOrRecId",
     "constructedVariable",
     "oneExpansion",
     "moreExpansions",
-    "option_single_constructed",
+    "optionalFieldAccess",
     "funCallStmt",
     "outputParameters",
     "inputParameters",
@@ -133,72 +128,16 @@ char* NonTerminalID[] = {
     "highPrecedenceOperators",
     "lowPrecedenceOperators",
     "booleanExpression",
-    "var",
+    "variable",
     "logicalOp",
     "relationalOp",
     "returnStmt",
     "optionalReturn",
     "idList",
-    "more_ids",
-    "definetypestmt",
-    "A"
+    "remainingIdentifiers",
+    "typeAliasStatement",
+    "recordOrUnion"
 };
-
-// char* NonTerminalID[] = {
-//     "program",
-//     "mainFunction",
-//     "otherFunctions",
-//     "function",
-//     "input_par",
-//     "output_par",
-//     "parameter_list",
-//     "dataType",`
-//     "primitiveDatatype",
-//     "constructedDatatype",
-//     "remaining_list",
-//     "stmts",
-//     "typeDefinitions",
-//     "actualOrRedefined",
-//     "typeDefinition",
-//     "fieldDefinitions",
-//     "fieldDefinition",
-//     "fieldType",
-//     "moreFields",
-//     "declarations",
-//     "declaration",
-//     "global_or_not",
-//     "otherStmts",
-//     "stmt",
-//     "assignmentStmt",
-//     "singleOrRecId",
-//     "option_single_constructed",
-//     "oneExpansion",
-//     "moreExpansions",
-//     "funCallStmt",
-//     "outputParameters",
-//     "inputParameters",
-//     "iterativeStmt",
-//     "conditionalStmt",
-//     "elsePart",
-//     "ioStmt",
-//     "arithmeticExpression",
-//     "expPrime",
-//     "term",
-//     "termPrime",
-//     "factor",
-//     "highPrecedenceOperators",
-//     "lowPrecedenceOperators",
-//     "booleanExpression",
-//     "var",
-//     "logicalOp",
-//     "relationalOp",
-//     "returnStmt",
-//     "optionalReturn",
-//     "idList",
-//     "more_ids",
-//     "definetypestmt",
-//     "A"
-// };
 
 void errorExit(const char* message) {
     fprintf(stderr, "Error: %s\n", message);
@@ -247,7 +186,7 @@ int findInTerminalMap(char* str) {
     
     printf("Looking for terminal: '%s'\n", str);
     
-    for(int i=0; i < TOTAL_GRAMMAR_TERMINALS; i++) {
+    for(int i=0; i < NUM_TERMINALS; i++) {
         printf("Comparing with: '%s'\n", TerminalID[i]);
         if(TerminalID[i] != NULL && strcmp(str, TerminalID[i]) == 0) {
             printf("Match found at index %d\n", i);
@@ -262,7 +201,7 @@ int findInTerminalMap(char* str) {
 int findInNonTerminalMap(char* str) {
     if (str == NULL) return -1;
     
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    for(int i=0; i < NUM_NONTERMINALS; i++) {
         if(NonTerminalID[i] != NULL && strcmp(str, NonTerminalID[i]) == 0)
             return i;
     }
@@ -280,16 +219,16 @@ char* getNonTerminal(int enumId) {
 
 ParsingTable* initialiseParsingTable() {
     ParsingTable* pt = (ParsingTable*)malloc(sizeof(ParsingTable));
-    pt->entries = (int**)malloc(TOTAL_GRAMMAR_NONTERMINALS*sizeof(int*));
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
-        pt->entries[i] = (int*)calloc(TOTAL_GRAMMAR_TERMINALS, sizeof(int));
+    pt->entries = (int**)malloc(NUM_NONTERMINALS*sizeof(int*));
+    for(int i=0; i < NUM_NONTERMINALS; i++) {
+        pt->entries[i] = (int*)calloc(NUM_TERMINALS, sizeof(int));
     }
     return pt;
 }
 
 int initialiseGrammar() {
     g = (Grammar*)malloc(sizeof(Grammar));
-    g->GRAMMAR_RULES_SIZE = TOTAL_GRAMMAR_RULES+1;
+    g->GRAMMAR_RULES_SIZE = NUM_GRAMMAR_RULES+1;
     g->GRAMMAR_RULES = (Rule**)malloc(sizeof(Rule*)*g->GRAMMAR_RULES_SIZE);
     g->GRAMMAR_RULES[0] = NULL;
 }
@@ -352,20 +291,20 @@ Rule* initialiseRule(SymbolList* sl, int ruleCount) {
 }
 
 NonTerminalRuleRecords** intialiseNonTerminalRecords() {
-    NonTerminalRuleRecords** ntrr = (NonTerminalRuleRecords**)malloc(sizeof(NonTerminalRuleRecords*)*TOTAL_GRAMMAR_NONTERMINALS);
+    NonTerminalRuleRecords** ntrr = (NonTerminalRuleRecords**)malloc(sizeof(NonTerminalRuleRecords*)*NUM_NONTERMINALS);
     return ntrr;
 }
 
 void initialiseCheckIfDone() {
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++)
+    for(int i=0; i < NUM_NONTERMINALS; i++)
         checkIfDone[i] = 0;
 }
 
 FirstAndFollow* initialiseFirstAndFollow() {
     FirstAndFollow* fafl = (FirstAndFollow*)malloc(sizeof(FirstAndFollow));
-    fafl->FIRST = (int**)malloc(sizeof(int*)*TOTAL_GRAMMAR_NONTERMINALS);
-    fafl->FOLLOW = (int**)malloc(sizeof(int*)*TOTAL_GRAMMAR_NONTERMINALS);
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    fafl->FIRST = (int**)malloc(sizeof(int*)*NUM_NONTERMINALS);
+    fafl->FOLLOW = (int**)malloc(sizeof(int*)*NUM_NONTERMINALS);
+    for(int i=0; i < NUM_NONTERMINALS; i++) {
         fafl->FIRST[i] = (int*)calloc(vectorSize, sizeof(int));
         fafl->FOLLOW[i] = (int*)calloc(vectorSize, sizeof(int));
     }
@@ -373,7 +312,7 @@ FirstAndFollow* initialiseFirstAndFollow() {
 }
 
 void calculateFirst(int** firstVector, int enumId) {
-    if (enumId < 0 || enumId >= TOTAL_GRAMMAR_NONTERMINALS) {
+    if (enumId < 0 || enumId >= NUM_NONTERMINALS) {
         printf("ERROR: Invalid enumId %d in calculateFirst\n", enumId);
         return;
     }
@@ -421,7 +360,7 @@ void calculateFirst(int** firstVector, int enumId) {
             }
             
             int nonTermId = nextSymbol->TYPE.NON_TERMINAL;
-            if (nonTermId < 0 || nonTermId >= TOTAL_GRAMMAR_NONTERMINALS) {
+            if (nonTermId < 0 || nonTermId >= NUM_NONTERMINALS) {
                 printf("ERROR: Invalid non-terminal ID %d\n", nonTermId);
                 break;
             }
@@ -455,14 +394,14 @@ void calculateFirst(int** firstVector, int enumId) {
 }
 
 void populateFirst(int** firstVector, Grammar* g) {
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    for(int i=0; i < NUM_NONTERMINALS; i++) {
         if(checkIfDone[i] == 0)
             calculateFirst(firstVector, i);
     }
 }
 
 void populateFollow(int** followVector, int** firstVector, Grammar* g) {
-    for(int i=1; i <= TOTAL_GRAMMAR_RULES; i++) {
+    for(int i=1; i <= NUM_GRAMMAR_RULES; i++) {
         Rule* r = g->GRAMMAR_RULES[i];
         Symbol* head = r->SYMBOLS->HEAD_SYMBOL;
         Symbol* trav = head->next;
@@ -496,8 +435,8 @@ void populateFollow(int** followVector, int** firstVector, Grammar* g) {
 }
 
 void populateFollowTillStable(int** followVector, int** firstVector, Grammar* g) {
-    int** prevFollowVector = (int**)malloc(TOTAL_GRAMMAR_NONTERMINALS*sizeof(int*));
-    for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    int** prevFollowVector = (int**)malloc(NUM_NONTERMINALS*sizeof(int*));
+    for(int i=0; i < NUM_NONTERMINALS; i++) {
         prevFollowVector[i] = (int*)calloc(vectorSize, sizeof(int));
     }
 
@@ -507,7 +446,7 @@ void populateFollowTillStable(int** followVector, int** firstVector, Grammar* g)
     while(1) {
         populateFollow(followVector, firstVector, g);
         int stable = 1;
-        for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+        for(int i=0; i < NUM_NONTERMINALS; i++) {
             for(int j=0; j < vectorSize; j++) {
                 if(prevFollowVector[i][j] != followVector[i][j])
                     stable = 0;
@@ -515,7 +454,7 @@ void populateFollowTillStable(int** followVector, int** firstVector, Grammar* g)
         }
         if(stable)
             break;
-        for(int i=0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+        for(int i=0; i < NUM_NONTERMINALS; i++) {
             for(int j=0; j < vectorSize; j++)
                 prevFollowVector[i][j] = followVector[i][j];
         }
@@ -541,7 +480,7 @@ void verifyFirstAndFollow(FirstAndFollow* fafl) {
     }
     
     // Verify that all non-terminals have First sets
-    for (int i = 0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    for (int i = 0; i < NUM_NONTERMINALS; i++) {
         if (fafl->FIRST[i] == NULL) {
             printf("ERROR: FIRST set for non-terminal %s (%d) is NULL\n", getNonTerminal(i), i);
             continue;
@@ -567,7 +506,7 @@ void verifyFirstAndFollow(FirstAndFollow* fafl) {
     }
     
     // Verify that all non-terminals have Follow sets
-    for (int i = 0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    for (int i = 0; i < NUM_NONTERMINALS; i++) {
         if (fafl->FOLLOW[i] == NULL) {
             printf("ERROR: FOLLOW set for non-terminal %s (%d) is NULL\n", getNonTerminal(i), i);
             continue;
@@ -605,7 +544,7 @@ FirstAndFollow* computeFirstAndFollowSets(Grammar* g) {
 }
 
 void createParseTable(FirstAndFollow* fafl, ParsingTable* pt) {
-    for(int i=1; i <= TOTAL_GRAMMAR_RULES; i++) {
+    for(int i=1; i <= NUM_GRAMMAR_RULES; i++) {
         Rule* r = g->GRAMMAR_RULES[i];
         int lhsNonTerminal = r->SYMBOLS->HEAD_SYMBOL->TYPE.NON_TERMINAL;
         
@@ -624,7 +563,7 @@ void createParseTable(FirstAndFollow* fafl, ParsingTable* pt) {
                 break;
             }
             else {
-                for(int j=0; j < TOTAL_GRAMMAR_TERMINALS; j++) {
+                for(int j=0; j < NUM_TERMINALS; j++) {
                     if(fafl->FIRST[trav->TYPE.NON_TERMINAL][j] == 1)
                         pt->entries[lhsNonTerminal][j] = r->RULE_NO;
                 }
@@ -637,7 +576,7 @@ void createParseTable(FirstAndFollow* fafl, ParsingTable* pt) {
         }
         
         if(epsilonGenerated) {
-            for(int j=0; j < TOTAL_GRAMMAR_TERMINALS; j++) {
+            for(int j=0; j < NUM_TERMINALS; j++) {
                 if(fafl->FOLLOW[lhsNonTerminal][j] == 1)
                     pt->entries[lhsNonTerminal][j] = r->RULE_NO;
             }
@@ -716,7 +655,7 @@ void verifyNTRR() {
         return;
     }
     
-    for (int i = 0; i < TOTAL_GRAMMAR_NONTERMINALS; i++) {
+    for (int i = 0; i < NUM_NONTERMINALS; i++) {
         printf("Checking non-terminal %d: %s\n", i, getNonTerminal(i));
         if (ntrr[i] == NULL) {
             printf("ERROR: NTRR for non-terminal %s (%d) is NULL\n", getNonTerminal(i), i);
@@ -743,9 +682,9 @@ void verifyNTRR() {
 Grammar* extractGrammar() {
     printf("Starting extractGrammar()\n");
     int ruleCount = 1;
-    int fd = open(GRAMMAR_FILE, O_RDONLY);
+    int fd = open(GRAMMAR_FILE_PATH, O_RDONLY);
     if (fd < 0) {
-        printf("ERROR: Failed to open grammar file %s\n", GRAMMAR_FILE);
+        printf("ERROR: Failed to open grammar file %s\n", GRAMMAR_FILE_PATH);
         exit(1);
     }
     
