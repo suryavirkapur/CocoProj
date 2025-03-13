@@ -4,7 +4,7 @@
 #define NUM_KEYWORDS 29
 #define BUFFER_SIZE 4096
 #define GRAMMAR_FILE_PATH "GRAMMAR.txt"
-
+// #define GRAMMAR_FILE_PATH "lang.gmr"
 #define NUM_NONTERMINALS 54
 #define NUM_TERMINALS 61
 #define NUM_GRAMMAR_RULES 96

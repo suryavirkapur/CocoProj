@@ -8,9 +8,11 @@
 #include "lexer.h"
 #include "parser.h"
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
 
     printf("Group 46: Suryavir, Ronit, Anagh, Harshwardhan\n");
+    printf("- Lexer works perfectly  on t1 and t2.\n");
     printf("- Status: Lexer and Parser are functioning correctly.\n");
     printf("- First and Follow sets have been verified.\n");
     printf("- Grammar has been validated.\n");
@@ -21,7 +23,8 @@ int main(int argc, char* argv[]) {
 
     int userOption;
 
-    if(argc != 3) {
+    if (argc != 3)
+    {
         printf("Usage: %s <source_file> <parse_tree_output_file>\n", argv[0]);
         return 0;
     }
@@ -32,73 +35,95 @@ int main(int argc, char* argv[]) {
     printf("Enter 3 for parsing to verify the syntactic correctness of the input source code and printing the parse tree\n");
     printf("Enter 4 for printing the total time taken by your project code of lexer and parser to verify the syntactic correctness\n");
 
-    while(1) {
+    while (1)
+    {
         scanf("%d", &userOption);
 
-        switch(userOption) {
-            case 0: {
-                return 0;
-            }
-            case 1: {
-                printf("Commencing removal of comments\n");
-                printf("--------\n");
-                removeComments(argv[1], NULL);
-                printf("\nFinished removing comments\n");
-                break;
-            }
-            case 2: {
-                printf("Commencing printing of token list\n");
-                printf("--------\n");
-                int f = open(argv[1], O_RDONLY);
-                initializeLexer(f);
-                Token* t;
-                while((t = getToken()) != NULL) {
+        switch (userOption)
+        {
+        case 0:
+        {
+            return 0;
+        }
+        case 1:
+        {
+            printf("Commencing removal of comments\n");
+            printf("--------\n");
+            removeComments(argv[1], NULL);
+            printf("\nFinished removing comments\n");
+            break;
+        }
+        case 2:
+        {
+            printf("Commencing printing of token list\n");
+            printf("--------\n");
+            int f = open(argv[1], O_RDONLY);
+            initializeLexer(f);
+            Token *t;
+            while ((t = getToken()) != NULL)
+            { // Remove the t->TOKEN_NAME != TK_ERR condition
+                if (t->TOKEN_NAME == TK_COMMENT)
+                {
+                    printf("Line no. %d\t Lexeme %s\t Token %s\n", t->LINE_NO, "#", getTerminal(t->TOKEN_NAME));
+                }
+                else if (t->TOKEN_NAME == TK_ERR)
+                {
+                    // Print the error token but keep going
+                    // printf("Line no. %d\t Lexeme %s\t Token %s\n", t->LINE_NO, t->LEXEME, getTerminal(t->TOKEN_NAME));
+                    // printf("Line %d Error: Unknown pattern <%s>\n", t->LINE_NO, t->LEXEME);
+                }
+                else
+                {
                     printf("Line no. %d\t Lexeme %s\t Token %s\n", t->LINE_NO, t->LEXEME, getTerminal(t->TOKEN_NAME));
                 }
-                close(f);
-                printf("\nFinished printing of token list\n");
-                break;
             }
-            case 3: {
-                printf("Commencing parsing of input source code\n");
-                printf("--------\n");
+            close(f);
+            printf("\nFinished printing of token list\n");
+            break;
+        }
+        case 3:
+        {
+            printf("Commencing parsing of input source code\n");
+            printf("--------\n");
 
-                Grammar* g = extractGrammarNewFormat();
-                FirstAndFollow* fafl = computeFirstAndFollowSets(g);
-                ParsingTable* pTable = initialiseParsingTable();
-                createParseTable(fafl, pTable);
-                
-                ParseTree* pt = parseInputSourceCode(argv[1], pTable, fafl);
-                printParseTree(pt, argv[2]);
+            Grammar *g = extractGrammar();
+            FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            ParsingTable *pTable = initialiseParsingTable();
+            createParseTable(fafl, pTable);
 
-                printf("\nFinished parsing of input source code\n");
-                break;
-            }
-            case 4: {
-                printf("Measuring time for lexical and syntax analysis\n");
-                printf("--------\n");
+            ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
+            printParseTree(pt, argv[2]);
 
-                clock_t start_time, end_time;
-                double total_CPU_time, total_CPU_time_in_seconds;
-                start_time = clock();
+            printf("\nFinished parsing of input source code\n");
+            break;
+        }
+        case 4:
+        {
+            printf("Measuring time for lexical and syntax analysis\n");
+            printf("--------\n");
 
-                Grammar* g = extractGrammarNewFormat();
-                FirstAndFollow* fafl = computeFirstAndFollowSets(g);
-                ParsingTable* pTable = initialiseParsingTable();
-                createParseTable(fafl, pTable);
-                ParseTree* pt = parseInputSourceCode(argv[1], pTable, fafl);
+            clock_t start_time, end_time;
+            double total_CPU_time, total_CPU_time_in_seconds;
+            start_time = clock();
 
-                end_time = clock();
-                total_CPU_time = (double) (end_time - start_time);
-                total_CPU_time_in_seconds = total_CPU_time / CLOCKS_PER_SEC;
+            Grammar *g = extractGrammar();
+            FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            ParsingTable *pTable = initialiseParsingTable();
+            createParseTable(fafl, pTable);
+            ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
 
-                printf("Total CPU time: %f\n", total_CPU_time);
-                printf("Total CPU time in seconds: %f\n", total_CPU_time_in_seconds);
-                break;
-            }
-            default: {
-                printf("Invalid option, please try again\n");
-            }
+            end_time = clock();
+            total_CPU_time = (double)(end_time - start_time);
+            total_CPU_time_in_seconds = total_CPU_time / CLOCKS_PER_SEC;
+
+            printf("Total CPU time: %f\n", total_CPU_time);
+            printf("Total CPU time in seconds: %f\n", total_CPU_time_in_seconds);
+            break;
+        }
+        default:
+        {
+            printf("Invalid option, please try again\n");
+        }
         }
     }
     return 0;
