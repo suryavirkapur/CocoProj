@@ -86,12 +86,12 @@ int main(int argc, char *argv[])
             printf("Commencing parsing of input source code\n");
             printf("--------\n");
 
-            Grammar *g = extractGrammar();
-            FirstAndFollow *fafl = computeFirstAndFollowSets(g);
-            ParsingTable *pTable = initialiseParsingTable();
+            struct Grammar *g = extractGrammar();
+            struct FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            struct ParsingTable *pTable = initializeParsingTable();
             createParseTable(fafl, pTable);
 
-            ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
+            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
             printParseTree(pt, argv[2]);
 
             printf("\nFinished parsing of input source code\n");
@@ -106,11 +106,11 @@ int main(int argc, char *argv[])
             double total_CPU_time, total_CPU_time_in_seconds;
             start_time = clock();
 
-            Grammar *g = extractGrammar();
-            FirstAndFollow *fafl = computeFirstAndFollowSets(g);
-            ParsingTable *pTable = initialiseParsingTable();
+            struct Grammar *g = extractGrammar();
+            struct FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            struct ParsingTable *pTable = initializeParsingTable();
             createParseTable(fafl, pTable);
-            ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
+            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
 
             end_time = clock();
             total_CPU_time = (double)(end_time - start_time);
