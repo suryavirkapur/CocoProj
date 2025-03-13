@@ -63,7 +63,7 @@ int main(int argc, char* argv[]) {
                 printf("Commencing parsing of input source code\n");
                 printf("--------\n");
 
-                Grammar* g = extractGrammar();
+                Grammar* g = extractGrammarNewFormat();
                 FirstAndFollow* fafl = computeFirstAndFollowSets(g);
                 ParsingTable* pTable = initialiseParsingTable();
                 createParseTable(fafl, pTable);
@@ -82,7 +82,7 @@ int main(int argc, char* argv[]) {
                 double total_CPU_time, total_CPU_time_in_seconds;
                 start_time = clock();
 
-                Grammar* g = extractGrammar();
+                Grammar* g = extractGrammarNewFormat();
                 FirstAndFollow* fafl = computeFirstAndFollowSets(g);
                 ParsingTable* pTable = initialiseParsingTable();
                 createParseTable(fafl, pTable);

@@ -1,0 +1,151 @@
+# Grammar for our language - New Format
+
+program -> otherFunctions mainFunction ;
+
+mainFunction -> TK_MAIN statementSequence TK_END ;
+
+otherFunctions -> function otherFunctions ;
+otherFunctions -> eps ;
+
+function -> TK_FUNID input_par output_par TK_SEM statementSequence TK_END ;
+
+input_par -> TK_INPUT TK_PARAMETER TK_LIST TK_SQL parameterList TK_SQR ;
+
+output_par -> TK_OUTPUT TK_PARAMETER TK_LIST TK_SQL parameterList TK_SQR ;
+output_par -> eps ;
+
+parameterList -> dataType TK_ID moreParameters ;
+
+dataType -> primitiveDatatype ;
+dataType -> constructedDatatype ;
+
+primitiveDatatype -> TK_INT ;
+primitiveDatatype -> TK_REAL ;
+
+constructedDatatype -> TK_RECORD TK_RUID ;
+constructedDatatype -> TK_UNION TK_RUID ;
+constructedDatatype -> TK_RUID ;
+
+moreParameters -> TK_COMMA parameterList ;
+moreParameters -> eps ;
+
+statementSequence -> typeDefinitions declarations otherStmts returnStmt ;
+
+typeDefinitions -> actualOrRedefined typeDefinitions ;
+typeDefinitions -> eps ;
+
+actualOrRedefined -> typeDefinition ;
+actualOrRedefined -> typeAliasStatement ;
+
+typeDefinition -> TK_RECORD TK_RUID fieldDefinitions TK_ENDRECORD ;
+typeDefinition -> TK_UNION TK_RUID fieldDefinitions TK_ENDUNION ;
+
+fieldDefinitions -> fieldDefinition fieldDefinition remainingFields ;
+
+fieldDefinition -> TK_TYPE fieldDataType TK_COLON TK_FIELDID TK_SEM ;
+
+fieldDataType -> primitiveDatatype ;
+fieldDataType -> constructedDatatype ;
+
+remainingFields -> fieldDefinition remainingFields ;
+remainingFields -> eps ;
+
+declarations -> declaration declarations ;
+declarations -> eps ;
+
+declaration -> TK_TYPE dataType TK_COLON TK_ID globalSpecifier TK_SEM ;
+
+globalSpecifier -> TK_COLON TK_GLOBAL ;
+globalSpecifier -> eps ;
+
+otherStmts -> statement otherStmts ;
+otherStmts -> eps ;
+
+statement -> assignmentStmt ;
+statement -> iterativeStmt ;
+statement -> conditionalStmt ;
+statement -> ioStmt ;
+statement -> funCallStmt ;
+
+assignmentStmt -> singleOrRecId TK_ASSIGNOP arithmeticExpression TK_SEM ;
+
+singleOrRecId -> TK_ID optionalFieldAccess ;
+
+optionalFieldAccess -> oneExpansion moreExpansions ;
+optionalFieldAccess -> eps ;
+
+oneExpansion -> TK_DOT TK_FIELDID ;
+
+moreExpansions -> oneExpansion moreExpansions ;
+moreExpansions -> eps ;
+
+funCallStmt -> outputParameters TK_CALL TK_FUNID TK_WITH TK_PARAMETERS inputParameters TK_SEM ;
+
+outputParameters -> TK_SQL idList TK_SQR TK_ASSIGNOP ;
+outputParameters -> eps ;
+
+inputParameters -> TK_SQL idList TK_SQR ;
+
+iterativeStmt -> TK_WHILE TK_OP booleanExpression TK_CL statement otherStmts TK_ENDWHILE ;
+
+conditionalStmt -> TK_IF TK_OP booleanExpression TK_CL TK_THEN statement otherStmts elsePart ;
+
+elsePart -> TK_ELSE statement otherStmts TK_ENDIF ;
+elsePart -> TK_ENDIF ;
+
+ioStmt -> TK_READ TK_OP variable TK_CL TK_SEM ;
+ioStmt -> TK_WRITE TK_OP variable TK_CL TK_SEM ;
+
+arithmeticExpression -> term expPrime ;
+
+expPrime -> lowPrecedenceOperators term expPrime ;
+expPrime -> eps ;
+
+term -> factor termPrime ;
+
+termPrime -> highPrecedenceOperators factor termPrime ;
+termPrime -> eps ;
+
+factor -> TK_OP arithmeticExpression TK_CL ;
+factor -> variable ;
+
+highPrecedenceOperators -> TK_MUL ;
+highPrecedenceOperators -> TK_DIV ;
+
+lowPrecedenceOperators -> TK_PLUS ;
+lowPrecedenceOperators -> TK_MINUS ;
+
+variable -> singleOrRecId ;
+variable -> TK_NUM ;
+variable -> TK_RNUM ;
+
+booleanExpression -> TK_OP booleanExpression TK_CL logicalOp TK_OP booleanExpression TK_CL ;
+booleanExpression -> variable relationalOp variable ;
+booleanExpression -> TK_NOT TK_OP booleanExpression TK_CL ;
+
+constructedVariable -> TK_ID oneExpansion moreExpansions ;
+
+logicalOp -> TK_AND ;
+logicalOp -> TK_OR ;
+
+relationalOp -> TK_LT ;
+relationalOp -> TK_LE ;
+relationalOp -> TK_EQ ;
+relationalOp -> TK_GT ;
+relationalOp -> TK_GE ;
+relationalOp -> TK_NE ;
+
+returnStmt -> TK_RETURN optionalReturn TK_SEM ;
+
+optionalReturn -> TK_SQL idList TK_SQR ;
+optionalReturn -> eps ;
+
+idList -> TK_ID remainingIdentifiers ;
+
+remainingIdentifiers -> TK_COMMA idList ;
+remainingIdentifiers -> eps ;
+
+typeAliasStatement -> TK_DEFINETYPE recordOrUnion TK_RUID TK_AS TK_RUID ;
+
+recordOrUnion -> TK_RECORD ;
+recordOrUnion -> TK_UNION ;

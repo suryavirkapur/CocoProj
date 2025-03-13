@@ -2,6 +2,7 @@
 
 int initialiseGrammar();
 Grammar* extractGrammar();
+Grammar* extractGrammarNewFormat();
 FirstAndFollow* computeFirstAndFollowSets(Grammar* g);
 void populateFirst(int** firstVector, Grammar* g);
 void calculateFirst(int** firstVector, int enum_id);

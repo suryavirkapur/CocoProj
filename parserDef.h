@@ -10,7 +10,7 @@ typedef enum NonTerminal {
     function,
     input_par,
     output_par,
-    parameter_list,
+    parameterList,
     dataType,
     primitiveDatatype,
     constructedDatatype,

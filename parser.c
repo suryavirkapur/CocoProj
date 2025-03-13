@@ -7,7 +7,7 @@
 #include <string.h>
 #include "parser.h"
 #include "lexer.h"
-
+#include <ctype.h>
 #include "constants.h"
 
 Grammar* g;
@@ -89,7 +89,7 @@ char* NonTerminalID[] = {
     "function",
     "input_par",
     "output_par",
-    "parameter_list",
+    "parameterList",
     "dataType",
     "primitiveDatatype",
     "constructedDatatype",
@@ -677,6 +677,200 @@ void verifyNTRR() {
     }
     
     printf("NTRR verification complete\n");
+}
+
+// Helper function to trim leading and trailing whitespace from a string
+char* trimWhitespace(char *str) {
+    char *end;
+
+    // Trim leading space
+    while(isspace((unsigned char)*str)) str++;
+
+    if(*str == 0)  // All spaces?
+        return str;
+
+    // Trim trailing space
+    end = str + strlen(str) - 1;
+    while(end > str && isspace((unsigned char)*end)) end--;
+
+    // Write new null terminator character
+    end[1] = '\0';
+
+    return str;
+}
+
+// Helper function to split a string by a delimiter
+char** splitString(char* str, const char* delimiter, int* count) {
+    char** result = NULL;
+    char* token = strtok(str, delimiter);
+    *count = 0;
+
+    while (token != NULL) {
+        result = realloc(result, sizeof(char*) * (*count + 1));
+        if (result == NULL) {
+            perror("realloc");
+            exit(EXIT_FAILURE);
+        }
+        result[*count] = trimWhitespace(strdup(token)); //strdup to copy token, trim whitespace
+        (*count)++;
+        token = strtok(NULL, delimiter);
+    }
+    return result;
+}
+
+
+Grammar* extractGrammarNewFormat() {
+    printf("Starting extractGrammarNewFormat()\n");
+    int ruleCount = 1;
+    int fd = open(GRAMMAR_FILE_PATH, O_RDONLY); // Or use a new path if you change the file name
+    if (fd < 0) {
+        printf("ERROR: Failed to open grammar file %s\n", GRAMMAR_FILE_PATH);
+        exit(1);
+    }
+
+    initialiseGrammar();
+    ntrr = intialiseNonTerminalRecords();
+    initialiseCheckIfDone();
+
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    NonTerminalRuleRecords* currentNTRR = NULL;
+
+    while ((read = getline(&line, &len, fd)) != -1) {
+        trimWhitespace(line); // Trim whitespace from the line
+
+        if (line[0] == '#' || line[0] == '\0') { // Skip comments and empty lines
+            continue;
+        }
+
+        char *ruleLine = strdup(line); // Duplicate the line to avoid modifying original
+
+        // Split line by "->"
+        int lhsRhsCount;
+        char** lhsRhsParts = splitString(ruleLine, "->", &lhsRhsCount);
+
+        if (lhsRhsCount != 2) {
+            printf("Error in grammar file at line: %s. Expected format: NonTerminal -> Symbol1 Symbol2 ... SymbolN ;\n", line);
+            free(ruleLine);
+            if (lhsRhsParts) {
+                for (int i = 0; i < lhsRhsCount; i++) free(lhsRhsParts[i]);
+                free(lhsRhsParts);
+            }
+            close(fd);
+            exit(1);
+        }
+
+        char* lhsStr = trimWhitespace(lhsRhsParts[0]);
+        char* rhsStrWithSemicolon = trimWhitespace(lhsRhsParts[1]);
+
+        //Remove trailing semicolon from RHS and split by spaces
+        char *rhsStr = strtok(rhsStrWithSemicolon, ";");
+        if (rhsStr == NULL) {
+            printf("Error in grammar file at line: %s. Missing semicolon at the end of rule.\n", line);
+            free(ruleLine);
+            for (int i = 0; i < lhsRhsCount; i++) free(lhsRhsParts[i]);
+            free(lhsRhsParts);
+            close(fd);
+            exit(1);
+        }
+
+        int rhsSymbolCount;
+        char** rhsSymbolsStr = splitString(rhsStr, " ", &rhsSymbolCount);
+
+        if (rhsSymbolCount == 0) {
+             printf("Error in grammar file at line: %s. RHS cannot be empty (unless it's epsilon).\n", line);
+             free(ruleLine);
+             for (int i = 0; i < lhsRhsCount; i++) free(lhsRhsParts[i]);
+             if (rhsSymbolsStr) {
+                 for (int i = 0; i < rhsSymbolCount; i++) free(rhsSymbolsStr[i]);
+                 free(rhsSymbolsStr);
+             }
+             close(fd);
+             exit(1);
+        }
+
+
+        SymbolList* sl = initialiseSymbolList();
+        Symbol* currentNonTerminalSymbol = intialiseSymbol(lhsStr);
+        if (currentNonTerminalSymbol == NULL) {
+             printf("Error in grammar file at line: %s. Invalid Non-Terminal: %s\n", line, lhsStr);
+             free(ruleLine);
+             for (int i = 0; i < lhsRhsCount; i++) free(lhsRhsParts[i]);
+             if (rhsSymbolsStr) {
+                 for (int i = 0; i < rhsSymbolCount; i++) free(rhsSymbolsStr[i]);
+                 free(rhsSymbolsStr);
+             }
+             close(fd);
+             exit(1);
+        }
+
+        if (currentNTRR == NULL || currentNTRR->end != 0) {
+            int nonTerminalEnum = currentNonTerminalSymbol->TYPE.NON_TERMINAL;
+            ntrr[nonTerminalEnum] = malloc(sizeof(NonTerminalRuleRecords));
+            ntrr[nonTerminalEnum]->start = ruleCount;
+            ntrr[nonTerminalEnum]->end = 0; // Initialize end to 0, will be updated later
+            currentNTRR = ntrr[nonTerminalEnum];
+        }
+
+        addToSymbolList(sl, currentNonTerminalSymbol);
+
+
+        for (int i = 0; i < rhsSymbolCount; i++) {
+            char* symbolStr = rhsSymbolsStr[i];
+            Symbol* s;
+            if (strcmp(symbolStr, "eps") == 0) {
+                s = (Symbol*)malloc(sizeof(Symbol));
+                if (s == NULL) {
+                    perror("malloc");
+                    exit(EXIT_FAILURE);
+                }
+                s->TYPE.TERMINAL = TK_EPS;
+                s->IS_TERMINAL = 1;
+                s->next = NULL;
+            } else {
+                s = intialiseSymbol(symbolStr);
+                if (s == NULL) {
+                    printf("Error in grammar file at line: %s. Invalid symbol: %s\n", line, symbolStr);
+                    free(ruleLine);
+                    for (int j = 0; j < lhsRhsCount; j++) free(lhsRhsParts[j]);
+                    if (rhsSymbolsStr) {
+                        for (int j = 0; j < rhsSymbolCount; j++) free(rhsSymbolsStr[j]);
+                        free(rhsSymbolsStr);
+                    }
+                    close(fd);
+                    exit(1);
+                }
+            }
+            addToSymbolList(sl, s);
+        }
+
+        Rule* r = initialiseRule(sl, ruleCount);
+        g->GRAMMAR_RULES[ruleCount] = r;
+        ruleCount++;
+
+        currentNTRR->end = ruleCount - 1;
+
+
+        free(ruleLine);
+        for (int i = 0; i < lhsRhsCount; i++) free(lhsRhsParts[i]);
+        free(lhsRhsParts);
+        if (rhsSymbolsStr) {
+            for (int i = 0; i < rhsSymbolCount; i++) free(rhsSymbolsStr[i]);
+            free(rhsSymbolsStr);
+        }
+    }
+
+    free(line);
+    close(fd);
+
+    // Verify the loaded grammar (you can keep these verification calls)
+    verifyGrammar();
+    verifyNTRR();
+
+    printf("Finished extractGrammarNewFormat()\n");
+    return g;
 }
 
 Grammar* extractGrammar() {

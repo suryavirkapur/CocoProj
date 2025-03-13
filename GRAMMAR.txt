@@ -3,10 +3,10 @@ mainFunction TK_MAIN statementSequence TK_END
 otherFunctions function otherFunctions
 otherFunctions eps
 function TK_FUNID input_par output_par TK_SEM statementSequence TK_END
-input_par TK_INPUT TK_PARAMETER TK_LIST TK_SQL parameter_list TK_SQR
-output_par TK_OUTPUT TK_PARAMETER TK_LIST TK_SQL parameter_list TK_SQR
+input_par TK_INPUT TK_PARAMETER TK_LIST TK_SQL parameterList TK_SQR
+output_par TK_OUTPUT TK_PARAMETER TK_LIST TK_SQL parameterList TK_SQR
 output_par eps
-parameter_list dataType TK_ID moreParameters
+parameterList dataType TK_ID moreParameters
 dataType primitiveDatatype
 dataType constructedDatatype
 primitiveDatatype TK_INT
@@ -14,7 +14,7 @@ primitiveDatatype TK_REAL
 constructedDatatype TK_RECORD TK_RUID
 constructedDatatype TK_UNION TK_RUID
 constructedDatatype TK_RUID
-moreParameters TK_COMMA parameter_list
+moreParameters TK_COMMA parameterList
 moreParameters eps
 statementSequence typeDefinitions declarations otherStmts returnStmt
 typeDefinitions actualOrRedefined typeDefinitions
