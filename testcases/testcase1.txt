@@ -1,0 +1,80 @@
+% This is a simple test case to demonstrate the language features
+
+% Define record and union types
+definetype record #student as #person
+record #student
+    type int : id;
+    type real : gpa;
+    type int : age;
+endrecord
+
+definetype union #data as #variant
+union #data
+    type int : intVal;
+    type real : realVal;
+endunion
+
+% Main function
+_calculateGPA input parameter list [record #student s1, int credits]
+output parameter list [real gpa];
+    % local variable declarations
+    type int : totalPoints;
+    type real : result : global;
+    
+    % assignment statements
+    totalPoints = s1.age * 10;
+    result = totalPoints / credits;
+    
+    % if-then-else statement
+    if (result > 8.5) then
+        write(s1.id);
+        write(result);
+    else
+        write(s1.id);
+        write(0.0);
+    endif;
+    
+    % function call
+    [gpa] = _computeResult with parameters [result, 10.0];
+    
+    return [gpa];
+end
+
+_computeResult input parameter list [real input, real maxGrade]
+output parameter list [real output];
+    % while loop example
+    type int : counter;
+    counter = 0;
+    
+    while (counter < 5)
+        input = input + 0.1;
+        counter = counter + 1;
+    endwhile;
+    
+    % simple arithmetic operations
+    output = (input / maxGrade) * 10.0;
+    
+    return [output];
+end
+
+main
+    % variable declarations
+    type record #student s1;
+    type int : credits;
+    type real : finalGPA;
+    
+    % initialize values
+    s1.id = 12345;
+    s1.gpa = 0.0;
+    s1.age = 20;
+    credits = 120;
+    
+    % read input
+    read(s1.id);
+    
+    % function call
+    [finalGPA] = _calculateGPA with parameters [s1, credits];
+    
+    % write output
+    write(finalGPA);
+end
