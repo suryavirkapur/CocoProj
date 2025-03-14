@@ -620,7 +620,6 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
         if (firstAndFollowSets->FOLLOW[i] == NULL) {
             fprintf(stderr, "Error: Memory allocation failed for FOLLOW set row %d\n", i);
             
-            // Clean up previously allocated memory
             free(firstAndFollowSets->FIRST[i]);
             for (int j = 0; j < i; j++) {
                 free(firstAndFollowSets->FIRST[j]);
@@ -654,10 +653,8 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     }
     
     printf("Computing FOLLOW sets\n");
-    // Add $ to FOLLOW of start symbol (program)
     firstAndFollowSets->FOLLOW[program][TK_DOLLAR] = 1;
     
-    // Compute FOLLOW sets
     populateFollowTillStable(firstAndFollowSets->FOLLOW, firstAndFollowSets->FIRST, parsedGrammar);
     
     printf("First and Follow computation complete\n");

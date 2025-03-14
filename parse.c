@@ -144,20 +144,16 @@ Token* createSyntheticToken(int tokenType, int lineNo) {
 
 // Simplified error reporting functions
 void reportLexicalError(Token* token) {
-    fprintf(stderr, "Lexical error at line %d: Invalid token '%s'\n", 
-            token->LINE_NO, token->LEXEME);
+    // fprintf(stderr, "Lexical error at line %d: Invalid token '%s'\n", token->LINE_NO, token->LEXEME);
 }
 
 void reportSyntaxError(Token* found, struct NaryTreeNode* expected) {
-    fprintf(stderr, "Syntax error at line %d: Expected %s, found %s\n", 
-            found->LINE_NO, getToken(expected->NODE_TYPE.L.ENUM_ID), 
-            getToken(found->TOKEN_NAME));
+    //fprintf(stderr, "Syntax error at line %d: Expected %s, found %s\n", found->LINE_NO, getToken(expected->NODE_TYPE.L.ENUM_ID), 
+      //      getToken(found->TOKEN_NAME));
 }
 
 void reportNonTerminalError(Token* token, int nonTerminal) {
-    fprintf(stderr, "Syntax error at line %d: Unexpected token %s for non-terminal %s\n", 
-            token->LINE_NO, getToken(token->TOKEN_NAME), 
-            getNonTerminal(nonTerminal));
+    //fprintf(stderr, "Syntax error at line %d: Unexpected token %s for non-terminal %s\n", token->LINE_NO, getToken(token->TOKEN_NAME), getNonTerminal(nonTerminal));
 }
 
 int isInFollow(struct FirstAndFollow* firstAndFollowSets, int nonTerminal, int token) {
@@ -214,6 +210,7 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
     // Main parsing loop
     while (1) {
         if (inputToken == NULL) {
+            printf("Reached end of input\n");
             break;
         }
         
@@ -223,11 +220,15 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
             continue;
         }
         
-        // Handle lexical errors
+        // Handle lexical errors - THIS IS THE KEY PART NEEDING FIXES
         if (inputToken->TOKEN_NAME == TK_ERR) {
             reportLexicalError(inputToken);
             hasLexicalError = true;
+            // Get next token and continue
             inputToken = getToken();
+            while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) {
+                inputToken = getToken();
+            }
             continue;
         }
         
@@ -243,9 +244,11 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
             // End of parsing
             if (stackTop->NODE_TYPE.L.ENUM_ID == TK_DOLLAR) {
                 if (inputToken == NULL || inputToken->TOKEN_NAME == TK_EOF) {
+                    printf("Successfully reached end of parsing\n");
                     break;  // Successful parse
                 }
-                // Handle extra tokens if needed
+                // Handle extra tokens
+                printf("Warning: Extra tokens after program end\n");
                 inputToken = getToken();
                 continue;
             }
@@ -255,9 +258,8 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
                 // Store token in parse tree
                 stackTop->NODE_TYPE.L.TOKEN = createTokenCopy(inputToken);
                 if (stackTop->NODE_TYPE.L.TOKEN == NULL) {
-                    fprintf(stderr, "Error: Memory allocation failed for token\n");
-                    close(fd);
-                    return pt;
+                    fprintf(stderr, "Warning: Memory allocation failed for token - continuing without storing\n");
+                    // Don't stop parsing, just continue without storing token
                 }
                 
                 // Consume token and pop stack
@@ -273,8 +275,12 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
                 reportSyntaxError(inputToken, stackTop);
                 hasSyntaxError = true;
                 
-                // Create synthetic token for error recovery
-                stackTop->NODE_TYPE.L.TOKEN = createSyntheticToken(stackTop->NODE_TYPE.L.ENUM_ID, inputToken->LINE_NO);
+                // Create synthetic token for error recovery - with null check
+                Token* syntheticToken = createSyntheticToken(stackTop->NODE_TYPE.L.ENUM_ID, 
+                                                           inputToken ? inputToken->LINE_NO : 0);
+                if (syntheticToken != NULL) {
+                    stackTop->NODE_TYPE.L.TOKEN = syntheticToken;
+                }
                 
                 // Recovery: Pop terminal without consuming input
                 pop(st);
@@ -283,10 +289,29 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
         }
         // Case 2: Non-terminal on top of the stack
         else {
-            int ruleNumber = pTable->entries[stackTop->NODE_TYPE.NL.ENUM_ID][inputToken->TOKEN_NAME];
+            int nonTerminalID = stackTop->NODE_TYPE.NL.ENUM_ID;
+            int tokenID = inputToken->TOKEN_NAME;
+            
+            // Safely check parsing table entry
+            if (nonTerminalID < 0 || nonTerminalID >= NUM_NONTERMINALS || 
+                tokenID < 0 || tokenID >= NUM_TERMINALS) {
+                fprintf(stderr, "Error: Invalid grammar indices - NT: %d, T: %d\n", nonTerminalID, tokenID);
+                pop(st); // Skip this problematic non-terminal
+                continue;
+            }
+            
+            int ruleNumber = pTable->entries[nonTerminalID][tokenID];
             
             // Rule exists in parsing table
             if (ruleNumber != 0) {
+                // Verify rule exists
+                if (ruleNumber < 1 || ruleNumber >= parsedGrammar->GRAMMAR_RULES_SIZE ||
+                    parsedGrammar->GRAMMAR_RULES[ruleNumber] == NULL) {
+                    fprintf(stderr, "Error: Invalid rule number %d\n", ruleNumber);
+                    pop(st); // Skip this problematic non-terminal
+                    continue;
+                }
+                
                 struct Rule* r = parsedGrammar->GRAMMAR_RULES[ruleNumber];
                 addRuleToParseTree(stackTop, r);
                 
@@ -294,7 +319,7 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
                 
                 // Push children onto stack in reverse order (skip pushing epsilon)
                 struct NaryTreeNode* childNode = stackTop->NODE_TYPE.NL.child;
-                if (!(childNode->IS_LEAF_NODE == 1 && childNode->NODE_TYPE.L.ENUM_ID == TK_EPS)) {
+                if (childNode != NULL && !(childNode->IS_LEAF_NODE == 1 && childNode->NODE_TYPE.L.ENUM_ID == TK_EPS)) {
                     pushTreeChildren(st, childNode);
                 }
             }
@@ -303,14 +328,16 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
                 reportNonTerminalError(inputToken, stackTop->NODE_TYPE.NL.ENUM_ID);
                 hasSyntaxError = true;
                 
-                // General error recovery strategy: panic mode
-                // Skip tokens until we find one that can be derived from this non-terminal
-                // or pop the non-terminal if we can't find such a token
-                if (isInFollow(firstAndFollowSets, stackTop->NODE_TYPE.NL.ENUM_ID, inputToken->TOKEN_NAME)) {
-                    // If token is in FOLLOW, pop the non-terminal (empty derivation)
-                    pop(st);
+                // Error recovery: Check if token is in FOLLOW set
+                if (isInFollow(firstAndFollowSets, nonTerminalID, tokenID)) {
+                    printf("Error recovery: Skipping non-terminal %s\n", getNonTerminal(nonTerminalID));
+                    pop(st); // Skip this non-terminal
+                } else if (isSynchronizingToken(tokenID)) {
+                    printf("Error recovery: Found synchronizing token %s\n", getTerminal(tokenID));
+                    pop(st); // Skip this non-terminal
                 } else {
-                    // Skip the current token and try again
+                    // Skip current token and continue
+                    printf("Error recovery: Skipping token %s\n", getTerminal(tokenID));
                     inputToken = getToken();
                     while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) {
                         inputToken = getToken();
@@ -320,11 +347,16 @@ struct ParseTree* parseInputSourceCode(char* sourceFile, struct ParsingTable* pT
         }
     }
     
-    // Report parsing status
     if (!hasLexicalError && !hasSyntaxError) {
         printf("\nSuccessfully parsed the input\n");
     } else {
         printf("\nParsing unsuccessful\n");
+        if (hasLexicalError) {
+            printf("- Lexical errors detected\n");
+        }
+        if (hasSyntaxError) {
+            printf("- Syntax errors detected\n");
+        }
     }
     
     close(fd);
