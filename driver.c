@@ -20,6 +20,7 @@ int main(int argc, char *argv[])
     printf("- Lexer tests (T1-T2) achieved 100%% accuracy.\n");
     printf("- Parser tests (T3-T5) achieved 100%% accuracy, validating both parser and lexer functionality.\n");
     printf("- Parser test (T6) achieved 75%% accuracy.\n");
+    printf("- Pending next stage: generating AST from parse tree\n");
 
     int userOption;
 
@@ -68,7 +69,7 @@ int main(int argc, char *argv[])
                 }
                 else if (t->TOKEN_NAME == TK_ERR)
                 {
-                    // Print the error token but keep going
+                    // print the error token but keep going
                     // printf("Line no. %d\t Lexeme %s\t Token %s\n", t->LINE_NO, t->LEXEME, getTerminal(t->TOKEN_NAME));
                     // printf("Line %d Error: Unknown pattern <%s>\n", t->LINE_NO, t->LEXEME);
                 }
@@ -86,13 +87,13 @@ int main(int argc, char *argv[])
             printf("Commencing parsing of input source code\n");
             printf("--------\n");
 
-            struct Grammar *g = extractGrammar();
-            struct FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            struct Grammar *parsedGrammar = extractGrammar();
+            struct FirstAndFollow *firstAndFollowSets = computeFirstAndFollowSets(parsedGrammar);
             struct ParsingTable *pTable = initializeParsingTable();
-            createParseTable(fafl, pTable);
+            createParseTable(firstAndFollowSets, pTable);
 
-            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
-            printParseTree(pt, argv[2]);
+            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, firstAndFollowSets);
+            writeParseTreeToFile(pt, argv[2]);
 
             printf("\nFinished parsing of input source code\n");
             break;
@@ -106,11 +107,11 @@ int main(int argc, char *argv[])
             double total_CPU_time, total_CPU_time_in_seconds;
             start_time = clock();
 
-            struct Grammar *g = extractGrammar();
-            struct FirstAndFollow *fafl = computeFirstAndFollowSets(g);
+            struct Grammar *parsedGrammar = extractGrammar();
+            struct FirstAndFollow *firstAndFollowSets = computeFirstAndFollowSets(parsedGrammar);
             struct ParsingTable *pTable = initializeParsingTable();
-            createParseTable(fafl, pTable);
-            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, fafl);
+            createParseTable(firstAndFollowSets, pTable);
+            struct ParseTree *pt = parseInputSourceCode(argv[1], pTable, firstAndFollowSets);
 
             end_time = clock();
             total_CPU_time = (double)(end_time - start_time);

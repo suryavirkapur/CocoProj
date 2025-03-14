@@ -4,15 +4,13 @@
 #include "dataStructures.h"
 #include "grammar.h"
 
-struct FirstAndFollow* initializeFirstAndFollow();
-void calculateFirst(int** firstVector, int enumId);
-void populateFirst(int** firstVector, struct Grammar* g);
-void populateFollow(int** followVector, int** firstVector, struct Grammar* g);
-void populateFollowTillStable(int** followVector, int** firstVector, struct Grammar* g);
-struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* g);
-void printFirstSets(struct FirstAndFollow* fafl);
-void printFollowSets(struct FirstAndFollow* fafl);
-void verifyFirstAndFollow(struct FirstAndFollow* fafl);
+struct FirstAndFollow* createFirstAndFollowSets();
+void computeFirstSets(int** firstVector, int enumId);
+void populateFirst(int** firstVector, struct Grammar* parsedGrammar);
+void populateFollow(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
+void populateFollowTillStable(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
+struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar);
+void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets);
 void initialiseCheckIfDone();
 
 #endif 

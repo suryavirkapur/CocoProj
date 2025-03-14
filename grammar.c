@@ -3,17 +3,18 @@
 #include <string.h>
 #include <ctype.h>
 #include <fcntl.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include "grammar.h"
 #include "constants.h"
 
-struct Grammar* g;
-struct NonTerminalRuleRecords** ntrr;
-int checkIfDone[NUM_NONTERMINALS] = {0};
-int vectorSize = NUM_TERMINALS+1;
+struct Grammar* parsedGrammar;
+struct NonTerminalRuleRecords** nonTerminalRuleRecords;
+bool nonTerminalProcessed[NUM_NONTERMINALS] = {0};
+int symbolVectorSize = NUM_TERMINALS+1;
 
-int syntaxErrorFlag;
-int lexicalErrorFlag;
+bool syntaxErrorOccurred;
+bool lexicalErrorOccurred;
 
 char* TerminalID[] = {
     "TK_ASSIGNOP",    // <---
@@ -167,10 +168,10 @@ char* getNonTerminal(int enumId) {
 }
 
 int initializeGrammar() {
-    g = (struct Grammar*)malloc(sizeof(struct Grammar));
-    g->GRAMMAR_RULES_SIZE = NUM_GRAMMAR_RULES+1;
-    g->GRAMMAR_RULES = (struct Rule**)malloc(sizeof(struct Rule*)*g->GRAMMAR_RULES_SIZE);
-    g->GRAMMAR_RULES[0] = NULL;
+    parsedGrammar = (struct Grammar*)malloc(sizeof(struct Grammar));
+    parsedGrammar->GRAMMAR_RULES_SIZE = NUM_GRAMMAR_RULES+1;
+    parsedGrammar->GRAMMAR_RULES = (struct Rule**)malloc(sizeof(struct Rule*)*parsedGrammar->GRAMMAR_RULES_SIZE);
+    parsedGrammar->GRAMMAR_RULES[0] = NULL;
     return 0;
 }
 
@@ -182,13 +183,13 @@ struct Rule* initializeRule(struct SymbolList* sl, int ruleCount) {
 }
 
 struct NonTerminalRuleRecords** initializeNonTerminalRecords() {
-    struct NonTerminalRuleRecords** ntrr = (struct NonTerminalRuleRecords**)malloc(sizeof(struct NonTerminalRuleRecords*)*NUM_NONTERMINALS);
-    return ntrr;
+    struct NonTerminalRuleRecords** nonTerminalRuleRecords = (struct NonTerminalRuleRecords**)malloc(sizeof(struct NonTerminalRuleRecords*)*NUM_NONTERMINALS);
+    return nonTerminalRuleRecords;
 }
 
 void initialiseCheckOnDone() {
     for(int i=0; i < NUM_NONTERMINALS; i++)
-        checkIfDone[i] = 0;
+        nonTerminalProcessed[i] = 0;
 }
 
 char* trimWhitespace(char *str) {
@@ -223,20 +224,20 @@ char** splitString(char* str, const char* delimiter, int* count) {
 void verifyGrammar() {
     printf("Verifying grammar...\n");
     
-    if (g == NULL) {
+    if (parsedGrammar == NULL) {
         printf("ERROR: Grammar is NULL\n");
         return;
     }
     
-    if (g->GRAMMAR_RULES == NULL) {
+    if (parsedGrammar->GRAMMAR_RULES == NULL) {
         printf("ERROR: Grammar rules array is NULL\n");
         return;
     }
     
-    printf("Grammar has %d rules\n", g->GRAMMAR_RULES_SIZE);
+    printf("Grammar has %d rules\n", parsedGrammar->GRAMMAR_RULES_SIZE);
     
-    for (int i = 1; i < g->GRAMMAR_RULES_SIZE; i++) {
-        struct Rule* r = g->GRAMMAR_RULES[i];
+    for (int i = 1; i < parsedGrammar->GRAMMAR_RULES_SIZE; i++) {
+        struct Rule* r = parsedGrammar->GRAMMAR_RULES[i];
         if (r == NULL) {
             printf("ERROR: Rule %d is NULL\n", i);
             continue;
@@ -270,31 +271,30 @@ void verifyGrammar() {
     printf("Grammar verification complete\n");
 }
 
+// why does this exist?
+// what can possibly go wrong with ntrr parsing?
 void verifyNTRR() {
     printf("Verifying non-terminal rule records...\n");
     
-    if (ntrr == NULL) {
+    if (nonTerminalRuleRecords == NULL) {
         printf("ERROR: NTRR is NULL\n");
         return;
     }
     
     for (int i = 0; i < NUM_NONTERMINALS; i++) {
         printf("Checking non-terminal %d: %s\n", i, getNonTerminal(i));
-        if (ntrr[i] == NULL) {
+        if (nonTerminalRuleRecords[i] == NULL) {
             printf("ERROR: NTRR for non-terminal %s (%d) is NULL\n", getNonTerminal(i), i);
             continue;
         }
         
-        printf("Non-terminal %s (%d): Rules %d to %d\n", 
-               getNonTerminal(i), i, ntrr[i]->start, ntrr[i]->end);
+        // printf("Non-terminal %s (%d): Rules %d to %d\n", getNonTerminal(i), i, nonTerminalRuleRecords[i]->start, nonTerminalRuleRecords[i]->end);
                
-        // Verify that the rule range is valid
-        if (ntrr[i]->start > ntrr[i]->end) {
+        if (nonTerminalRuleRecords[i]->start > nonTerminalRuleRecords[i]->end) {
             printf("ERROR: Invalid rule range for non-terminal %s (%d)\n", getNonTerminal(i), i);
         }
         
-        // Verify that the rule range is within bounds
-        if (ntrr[i]->start < 1 || ntrr[i]->end >= g->GRAMMAR_RULES_SIZE) {
+        if (nonTerminalRuleRecords[i]->start < 1 || nonTerminalRuleRecords[i]->end >= parsedGrammar->GRAMMAR_RULES_SIZE) {
             printf("ERROR: Rule range out of bounds for non-terminal %s (%d)\n", getNonTerminal(i), i);
         }
     }
@@ -325,7 +325,7 @@ struct Grammar* extractGrammar() {
     struct SymbolList* sl = NULL;
     
     initializeGrammar();
-    ntrr = initializeNonTerminalRecords();
+    nonTerminalRuleRecords = initializeNonTerminalRecords();
     initialiseCheckOnDone();
     
     while((actualRead = read(fd, &c, sizeof(char))) > 0) {
@@ -378,24 +378,24 @@ struct Grammar* extractGrammar() {
                             exit(1);
                         }
                         
-                        ntrr[s->TYPE.NON_TERMINAL] = (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-                        if (ntrr[s->TYPE.NON_TERMINAL] == NULL) {
+                        nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] = (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
+                        if (nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] == NULL) {
                             printf("ERROR: Memory allocation failed for NTRR\n");
                             free(symbol);
                             close(fd);
                             exit(1);
                         }
-                        ntrr[s->TYPE.NON_TERMINAL]->start = ruleCount;
+                        nonTerminalRuleRecords[s->TYPE.NON_TERMINAL]->start = ruleCount;
                     } else if (currentNonTerminal->TYPE.NON_TERMINAL != s->TYPE.NON_TERMINAL) {
-                        ntrr[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount-1;
-                        ntrr[s->TYPE.NON_TERMINAL] = (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-                        if (ntrr[s->TYPE.NON_TERMINAL] == NULL) {
+                        nonTerminalRuleRecords[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount-1;
+                        nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] = (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
+                        if (nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] == NULL) {
                             printf("ERROR: Memory allocation failed for NTRR\n");
                             free(symbol);
                             close(fd);
                             exit(1);
                         }
-                        ntrr[s->TYPE.NON_TERMINAL]->start = ruleCount;
+                        nonTerminalRuleRecords[s->TYPE.NON_TERMINAL]->start = ruleCount;
                     }
                     currentNonTerminal = s;
                 }
@@ -456,7 +456,7 @@ struct Grammar* extractGrammar() {
                     exit(1);
                 }
                 
-                g->GRAMMAR_RULES[ruleCount] = r;
+                parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
                 ruleCount++;
                 
                 // Reset for next line
@@ -521,7 +521,7 @@ struct Grammar* extractGrammar() {
                     addToSymbolList(sl, s);
                     struct Rule* r = initializeRule(sl, ruleCount);
                     if (r != NULL) {
-                        g->GRAMMAR_RULES[ruleCount] = r;
+                        parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
                         ruleCount++;
                     }
                 }
@@ -532,7 +532,7 @@ struct Grammar* extractGrammar() {
                 addToSymbolList(sl, s);
                 struct Rule* r = initializeRule(sl, ruleCount);
                 if (r != NULL) {
-                    g->GRAMMAR_RULES[ruleCount] = r;
+                    parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
                     ruleCount++;
                 }
             }
@@ -544,12 +544,11 @@ struct Grammar* extractGrammar() {
     
     
     if (currentNonTerminal != NULL) {
-        ntrr[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount-1;
+        nonTerminalRuleRecords[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount-1;
     }
-
-    // Verify the loaded grammar
+    
     verifyGrammar();
     verifyNTRR();
     
-    return g;
+    return parsedGrammar;
 }

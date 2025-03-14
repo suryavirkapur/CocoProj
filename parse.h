@@ -7,9 +7,9 @@
 
 // Function declarations for parsing operations
 struct ParsingTable* initializeParsingTable();
-void createParseTable(struct FirstAndFollow* fafl, struct ParsingTable* pt);
-struct ParseTree* parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* fafl);
-void printParseTree(struct ParseTree* pt, char* outfile);
+void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* pt);
+struct ParseTree* parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
+void writeParseTreeToFile(struct ParseTree* pt, char* outfile);
 void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f);
 void printParseTable(struct ParsingTable* pt);
 int getErrorStatus();

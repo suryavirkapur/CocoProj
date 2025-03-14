@@ -6,12 +6,11 @@
 #include "firstFollow.h"
 #include "parse.h"
 
-int initialiseGrammar();
 struct Grammar* extractGrammar();
-struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* g);
-void createParseTable(struct FirstAndFollow* fafl, struct ParsingTable* pt);
-struct ParseTree* parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* fafl);
-void printParseTree(struct ParseTree* pt, char* outfile);
+struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar);
+void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* pt);
+struct ParseTree* parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
+void writeParseTreeToFile(struct ParseTree* pt, char* outputFile);
 int getErrorStatus();
 
 #endif

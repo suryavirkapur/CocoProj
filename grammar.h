@@ -1,9 +1,9 @@
 #ifndef GRAMMAR_H
 #define GRAMMAR_H
 
+#include <stdbool.h>
 #include "dataStructures.h"
 
-// Function declarations for grammar operations
 int initializeGrammar();
 struct Grammar* extractGrammar();
 struct NonTerminalRuleRecords** initializeNonTerminalRecords();
@@ -12,23 +12,19 @@ int findInNonTerminalMap(char* str);
 int findInTerminalMap(char* str);
 char* getTerminal(int enumId);
 char* getNonTerminal(int enumId);
-void printSymbol(struct Symbol* ls);
-void printRule(struct Rule* r);
-void printGrammarStructure();
-void printNonTerminalRuleRecords();
 void verifyGrammar();
 void verifyNTRR();
 
-// External variables
-extern struct Grammar* g;
-extern struct NonTerminalRuleRecords** ntrr;
-extern int checkIfDone[];
-extern int vectorSize;
+extern struct Grammar* parsedGrammar;
+extern struct NonTerminalRuleRecords** nonTerminalRuleRecords;
 
-extern int syntaxErrorFlag;
-extern int lexicalErrorFlag;
+extern bool nonTerminalProcessed[];
+extern int symbolVectorSize;
+
+extern bool syntaxErrorOccurred;
+extern bool lexicalErrorOccurred;
 
 extern char* TerminalID[];
 extern char* NonTerminalID[];
 
-#endif // GRAMMAR_H
+#endif 
