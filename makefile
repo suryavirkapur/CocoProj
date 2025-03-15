@@ -1,10 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -g
 
-all: compiler
-
-compiler: driver.o lexer.o dataStructures.o grammar.o firstFollow.o parse.o utils.o
-	$(CC) $(CFLAGS) -o compiler driver.o lexer.o dataStructures.o grammar.o firstFollow.o parse.o utils.o
+stage1exe: driver.o lexer.o dataStructures.o grammar.o firstFollow.o parse.o utils.o
+	$(CC) $(CFLAGS) -o stage1exe driver.o lexer.o dataStructures.o grammar.o firstFollow.o parse.o utils.o
 
 driver.o: driver.c parser.h lexer.h constants.h
 	$(CC) $(CFLAGS) -c driver.c
@@ -28,8 +26,8 @@ utils.o: utils.c utils.h constants.h
 	$(CC) $(CFLAGS) -c utils.c
 
 clean:
-	rm -f *.o compiler
+	rm -f *.o stage1exe
 
 cleanall:
-	rm -f *.o compiler
+	rm -f *.o stage1exe
 	rm -f *.txt

@@ -1,3 +1,11 @@
+/*
+Group No. 46
+- Suryavir Kapur (2022A7PS0293U)
+- Ronit Dhansoia (2022A7PS0168U)
+- Anagh Goyal (2022A7PS0177U)
+- Harshwardhan Sugam (2022A7PS0114P)
+*/
+
 #ifndef LEX_DEF_
 #define LEX_DEF_
 
@@ -65,17 +73,17 @@ typedef enum TokenName {
   TK_EOF         // End of file marker
 } TokenName;
 
-typedef union Value {
+typedef union tVal {
   int   INT_VALUE;
   float FLOAT_VALUE;
-} Value;
+} tVal;
 
 typedef struct Token {
-  TokenName TOKEN_NAME;
-  char*     LEXEME;
-  int       LINE_NO;
-  int       IS_NUMBER;
-  Value*    VALUE;
+  TokenName tokenName;
+  char*     tLexeme;
+  int       lineNum;
+  int       isNum;
+  tVal*     VALUE;
 } Token;
 
 #endif

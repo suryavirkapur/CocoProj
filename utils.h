@@ -1,3 +1,11 @@
+/*
+Group No. 46
+- Suryavir Kapur (2022A7PS0293U)
+- Ronit Dhansoia (2022A7PS0168U)
+- Anagh Goyal (2022A7PS0177U)
+- Harshwardhan Sugam (2022A7PS0114P)
+*/
+
 #ifndef UTILS_H
 #define UTILS_H
 
@@ -17,5 +25,8 @@ bool isCharacterInRange(const char character, const char rangeStart, const char 
 bool isCharacterEqualTo(const char character, const char targetCharacter);
 
 char* duplicateSubstring(const char* sourceStart, const char* sourceEnd);
+
+int str2int(const char* str);
+int str2flt(const char* str);
 
 #endif

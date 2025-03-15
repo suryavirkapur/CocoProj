@@ -1,3 +1,11 @@
+/*
+Group No. 46
+- Suryavir Kapur (2022A7PS0293U)
+- Ronit Dhansoia (2022A7PS0168U)
+- Anagh Goyal (2022A7PS0177U)
+- Harshwardhan Sugam (2022A7PS0114P)
+*/
+
 #include <fcntl.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -10,15 +18,29 @@
 
 #include "constants.h"
 
+int str2int(const char* str) {
+  if (str == NULL || *str == '\0') return 0;
+
+  char* endptr;
+  long  num = strtol(str, &endptr, 10);
+
+  return (int)num;
+}
+
+float str2flt(const char* str) {
+  if (str == NULL || *str == '\0') return 0.0f;
+
+  char*  endptr;
+  double f = strtod(str, &endptr);
+
+  return (float)f;
+}
+
 int computeHash(const char* str) {
-  uint32_t hash = 5381; // Start with a prime number
-  int      c;
-
-  while ((c = *str++)) {
-    hash = ((hash << 5) + hash) + c; // hash * 33 + c
-  }
-
-  return (int)(hash % NUM_KEYWORDS); // Ensure positive result
+  uint32_t hash = 5381;
+  int      cc;
+  while ((cc = *str++)) hash = ((hash << 5) + hash) + cc;
+  return (int)(hash % NUM_KEYWORDS);
 }
 
 bool isCharacterInRange(const char character, const char rangeStart, const char rangeEnd) {

@@ -67,7 +67,7 @@ enum NonTerminalEnum {
 typedef TokenName Terminal;
 
 union SymbolType {
-  Terminal         TERMINAL;
+  Terminal             TERMINAL;
   enum NonTerminalEnum NON_TERMINAL;
 };
 

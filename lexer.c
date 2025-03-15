@@ -1,4 +1,13 @@
+/*
+Group No. 46
+- Suryavir Kapur (2022A7PS0293U)
+- Ronit Dhansoia (2022A7PS0168U)
+- Anagh Goyal (2022A7PS0177U)
+- Harshwardhan Sugam (2022A7PS0114P)
+*/
+
 #include <fcntl.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,19 +21,21 @@
 #include "utils.h"
 
 char* buffPair[2];
-int   bufferToBeLoaded = 0;
-int   currentBuffer    = 1;
-int   inputExhausted   = 0;
-int   fp;
-char* lexemeStart                      = NULL;
-char* forward                          = NULL;
-int   lexerState                       = 0;
-int   lineCount                        = 1;
-int   nextCharacterReadAfterRetraction = 0;
+int   bufferIndex           = 0;
+bool  currentBufferIsSecond = 1;
+int   inputBytesRead        = 0;
+int   fileDescriptor;
+char* lexemeStart        = NULL;
+char* forward            = NULL;
+int   lexerState         = 0;
+int   lineCount          = 1;
+int   lookaheadCharacter = 0;
+int   backtrackingState  = 0;
+bool  lexDebug           = false;
 
 struct Node {
-  TokenName    TOKEN_NAME;
-  char*        LEXEME;
+  TokenName    tokenName;
+  char*        tLexeme;
   struct Node* next;
 };
 
@@ -39,49 +50,46 @@ struct KeywordTable {
 struct KeywordTable* kt;
 
 struct Node* addNode(struct Node* head, TokenName token, char* text) {
+  if (lexDebug) printf("Adding node %s\n", text);
   struct Node* newNode = (struct Node*)malloc(sizeof(struct Node));
-  if (newNode == NULL) {
-    return NULL; // Handle memory allocation failure
-  }
-
-  newNode->LEXEME     = text;
-  newNode->TOKEN_NAME = token;
-  newNode->next       = head;
-
+  if (newNode == NULL) { return NULL; }
+  newNode->tLexeme   = text;
+  newNode->tokenName = token;
+  newNode->next      = head;
   return newNode;
 }
 
 void insertKeyword(struct KeywordTable* table, TokenName token, char* text) {
+  if (lexDebug) printf("Inserting keyword %s\n", text);
   int index                       = computeHash(text);
   table->KEYWORDS[index].keywords = addNode(table->KEYWORDS[index].keywords, token, text);
 }
 
 struct Node* findKeyword(struct KeywordTable* hashTable, const char* keyword) {
+  if (lexDebug) printf("Looking for keyword %s\n", keyword);
   uint32_t     bucketIndex = computeHash(keyword);
   struct Node* currentNode = hashTable->KEYWORDS[bucketIndex].keywords;
 
   while (currentNode != NULL) {
-    if (strcmp(keyword, currentNode->LEXEME) == 0) { return currentNode; }
+    if (strcmp(keyword, currentNode->tLexeme) == 0) { return currentNode; }
     currentNode = currentNode->next;
   }
   return NULL;
 }
 
 struct KeywordTable* createKeywordTable() {
+  if (lexDebug) printf("Creating keyword table\n");
   struct KeywordTable* hashTable = (struct KeywordTable*)malloc(sizeof(struct KeywordTable));
-  if (hashTable == NULL) {
-    return NULL; // Handle memory allocation failure
-  }
+  if (hashTable == NULL) return NULL;
 
   hashTable->KEYWORDS = (struct KeywordNode*)malloc(NUM_KEYWORDS * sizeof(struct KeywordNode));
   if (hashTable->KEYWORDS == NULL) {
-    free(hashTable); // Free previously allocated memory
-    return NULL;     // Handle memory allocation failure
+    free(hashTable);
+    return NULL;
   }
 
   for (int i = 0; i < NUM_KEYWORDS; i++) { hashTable->KEYWORDS[i].keywords = NULL; }
 
-  // Initialize keywords (using an array of structs for clarity)
   struct {
     TokenName   token;
     const char* keyword;
@@ -124,35 +132,38 @@ struct KeywordTable* createKeywordTable() {
   return hashTable;
 }
 
-void initializeBuffers(int f) {
-  fp                               = f;
-  buffPair[0]                      = (char*)malloc(BUFFER_SIZE * sizeof(char));
-  buffPair[1]                      = (char*)malloc(BUFFER_SIZE * sizeof(char));
-  lexemeStart                      = NULL;
-  forward                          = NULL;
-  currentBuffer                    = 1;
-  bufferToBeLoaded                 = 0;
-  inputExhausted                   = 0;
-  lineCount                        = 1;
-  nextCharacterReadAfterRetraction = 0;
-  lexerState                       = 0;
+void setupBuffers(int f) {
+  if (lexDebug) printf("Setting up buffers\n");
+  lexemeStart           = NULL;
+  forward               = NULL;
+  fileDescriptor        = f;
+  inputBytesRead        = 0;
+  lineCount             = 1;
+  lookaheadCharacter    = 0;
+  buffPair[0]           = (char*)malloc(BUFFER_SIZE * sizeof(char));
+  buffPair[1]           = (char*)malloc(BUFFER_SIZE * sizeof(char));
+  lexerState            = 0;
+  currentBufferIsSecond = 1;
+  bufferIndex           = 0;
 }
 
-void initializeLexer(int f) {
-  initializeBuffers(f);
-  kt = createKeywordTable();
+void setupLexer(int f) {
+  if (lexDebug) printf("Setting up lexer\n");
+  setupBuffers(f);
+  kt                = createKeywordTable();
+  backtrackingState = 0;
 }
 
 int getInputStream() {
-  if (inputExhausted != 0) return EOF;
+  if (inputBytesRead != 0) return EOF;
 
-  memset(buffPair[bufferToBeLoaded], EOF, BUFFER_SIZE);
+  memset(buffPair[bufferIndex], EOF, BUFFER_SIZE);
 
-  int res = read(fp, buffPair[bufferToBeLoaded], BUFFER_SIZE);
-  if (res == 0 || res < BUFFER_SIZE) { inputExhausted = 1; }
+  int res = read(fileDescriptor, buffPair[bufferIndex], BUFFER_SIZE);
+  if (res == 0 || res < BUFFER_SIZE) { inputBytesRead = 1; }
 
-  bufferToBeLoaded = 1 - bufferToBeLoaded;
-  currentBuffer    = 1 - currentBuffer;
+  bufferIndex           = 1 - bufferIndex;
+  currentBufferIsSecond = 1 - currentBufferIsSecond;
   if (res == -1) {
     printf("Error: Input Buffers failed to be loaded\n");
     return -1;
@@ -161,264 +172,309 @@ int getInputStream() {
 }
 
 char nextChar() {
+  if (lexDebug) printf("Next char\n");
   if (lexemeStart == NULL && forward == NULL) {
     int res = getInputStream();
     if (res == -1) { return EOF; }
-    lexemeStart        = buffPair[currentBuffer];
-    forward            = buffPair[currentBuffer];
+    lexemeStart        = buffPair[currentBufferIsSecond];
+    forward            = buffPair[currentBufferIsSecond];
     char* curr_forward = forward;
     forward++;
 
-    if (nextCharacterReadAfterRetraction == 0 && *curr_forward == '\n') { lineCount++; }
+    if (lookaheadCharacter == 0 && *curr_forward == '\n') { lineCount++; }
 
-    if (nextCharacterReadAfterRetraction == 1) nextCharacterReadAfterRetraction = 0;
+    if (lookaheadCharacter == 1) lookaheadCharacter = 0;
 
     return *curr_forward;
   }
 
   char* curr_forward = forward;
 
-  if (curr_forward - buffPair[currentBuffer] == BUFFER_SIZE - 1) {
+  if (curr_forward - buffPair[currentBufferIsSecond] == BUFFER_SIZE - 1) {
     int res = getInputStream();
     if (res == -1) { return EOF; }
-    forward = buffPair[currentBuffer];
+    forward = buffPair[currentBufferIsSecond];
   } else if (*curr_forward == EOF) {
     return EOF;
   } else
     forward++;
 
-  if (nextCharacterReadAfterRetraction == 0 && *curr_forward == '\n') { lineCount++; }
+  if (lookaheadCharacter == 0 && *curr_forward == '\n') { lineCount++; }
 
-  if (nextCharacterReadAfterRetraction == 1) nextCharacterReadAfterRetraction = 0;
+  if (lookaheadCharacter == 1) lookaheadCharacter = 0;
 
   return *curr_forward;
 }
 
 void accept() {
+  if (lexDebug) printf("Accept\n");
   lexemeStart = forward;
+  backtrackingState++;
 }
 
 void retract(int amt) {
+  if (lexDebug) printf("Retract %d\n", amt);
   while (amt > 0) {
     --forward;
     --amt;
   }
-
-  nextCharacterReadAfterRetraction = 1;
+  backtrackingState--;
+  lookaheadCharacter = 1;
 }
 
-Token* populateToken(Token* t, TokenName tokenName, char* lexeme, int lineNumber, int isNumber, Value* value) {
-  t->TOKEN_NAME = tokenName;
-  t->LINE_NO    = lineNumber;
-  t->IS_NUMBER  = isNumber;
-  t->LEXEME     = lexeme;
-  t->VALUE      = value;
+Token* fillToken(Token* t, TokenName tokenName, char* lexeme, int lineNumber, int isNumber, tVal* value) {
+  if (lexDebug) printf("Filled token with line %d\n", lineNumber);
+  t->tokenName = tokenName;
+  t->lineNum   = lineNumber;
+  t->isNum     = isNumber;
+  t->tLexeme   = lexeme;
+  t->VALUE     = value;
   return t;
 }
 
-int stringToInteger(char* str) {
-  int num;
-  sscanf(str, "%d", &num);
-  return num;
-}
-
-float stringToFloat(char* str) {
-  float f;
-  sscanf(str, "%f", &f);
-  return f;
-}
-
 Token* getToken() {
+  if (lexDebug) printf("Getting token\n");
+
+  // track dfa state
   lexerState = 0;
-  char   c   = 1;
-  Token* t   = (Token*)malloc(sizeof(Token));
-  int    errorType;
+  char c     = 1;
+  int  errorType;
+
+  // make a new token
+  Token* t = (Token*)malloc(sizeof(Token));
 
   while (1) {
+    if (lexDebug) printf("Lexer state %d\n", lexerState);
     if (c == EOF) return NULL;
 
     switch (lexerState) {
     case 0: {
       c = nextChar();
       if (isCharacterEqualTo(c, '<')) {
-        lexerState = 16;
+        lexerState        = 16;
+        backtrackingState = 16;
       } else if (isCharacterEqualTo(c, '#')) {
-        lexerState = 52;
+        lexerState        = 52;
+        backtrackingState = 52;
       } else if (isCharacterInRange(c, 'b', 'd')) {
-        lexerState = 35;
+        lexerState        = 35;
+        backtrackingState = 35;
       } else if (isCharacterEqualTo(c, 'a') || isCharacterInRange(c, 'e', 'z')) {
-        lexerState = 40;
+        lexerState        = 40;
+        backtrackingState = 40;
       } else if (isCharacterEqualTo(c, '_')) {
-        lexerState = 47;
+        lexerState        = 47;
+        backtrackingState = 47;
       } else if (isCharacterEqualTo(c, '[')) {
-        lexerState = 7;
+        lexerState        = 7;
+        backtrackingState = 7;
       } else if (isCharacterEqualTo(c, ']')) {
-        lexerState = 8;
+        lexerState        = 8;
+        backtrackingState = 8;
       } else if (isCharacterEqualTo(c, ',')) {
-        lexerState = 9;
+        lexerState        = 9;
+        backtrackingState = 9;
       } else if (isCharacterEqualTo(c, ';')) {
-        lexerState = 12;
+        lexerState        = 12;
+        backtrackingState = 12;
       } else if (isCharacterEqualTo(c, ':')) {
-        lexerState = 11;
+        lexerState        = 11;
+        backtrackingState = 11;
       } else if (isCharacterEqualTo(c, '.')) {
-        lexerState = 10;
+        lexerState        = 10;
+        backtrackingState = 10;
       } else if (isCharacterEqualTo(c, '(')) {
-        lexerState = 5;
+        lexerState        = 5;
+        backtrackingState = 5;
       } else if (isCharacterEqualTo(c, ')')) {
-        lexerState = 6;
+        lexerState        = 6;
+        backtrackingState = 6;
       } else if (isCharacterEqualTo(c, '+')) {
-        lexerState = 1;
+        lexerState        = 1;
+        backtrackingState = 1;
       } else if (isCharacterEqualTo(c, '-')) {
-        lexerState = 2;
+        lexerState        = 2;
+        backtrackingState = 2;
       } else if (isCharacterEqualTo(c, '*')) {
-        lexerState = 3;
+        lexerState        = 3;
+        backtrackingState = 3;
       } else if (isCharacterEqualTo(c, '/')) {
-        lexerState = 4;
+        lexerState        = 4;
+        backtrackingState = 4;
       } else if (isCharacterEqualTo(c, '~')) {
-        lexerState = 13;
+        lexerState        = 13;
+        backtrackingState = 13;
       } else if (isCharacterEqualTo(c, '!')) {
-        lexerState = 14;
+        lexerState        = 14;
+        backtrackingState = 14;
       } else if (isCharacterEqualTo(c, '>')) {
-        lexerState = 22;
+        lexerState        = 22;
+        backtrackingState = 22;
       } else if (isCharacterEqualTo(c, '=')) {
-        lexerState = 25;
+        lexerState        = 25;
+        backtrackingState = 25;
       } else if (isCharacterEqualTo(c, '@')) {
-        lexerState = 27;
+        lexerState        = 27;
+        backtrackingState = 27;
       } else if (isCharacterEqualTo(c, '&')) {
-        lexerState = 30;
+        lexerState        = 30;
+        backtrackingState = 30;
       } else if (isCharacterEqualTo(c, '%')) {
-        lexerState = 33;
+        lexerState        = 33;
+        backtrackingState = 33;
       } else if (isCharacterInRange(c, '0', '9')) {
-        lexerState = 42;
+        lexerState        = 42;
+        backtrackingState = 42;
       } else if (isCharacterEqualTo(c, ' ') || isCharacterEqualTo(c, '\f') || isCharacterEqualTo(c, '\r') ||
                  isCharacterEqualTo(c, '\t') || isCharacterEqualTo(c, '\v')) {
         lexemeStart++;
-        lexerState = 0;
+        lexerState        = 0;
+        backtrackingState = 0;
       } else if (isCharacterEqualTo(c, '\n')) {
         lexemeStart++;
-        lexerState = 0;
+        lexerState        = 0;
+        backtrackingState = 0;
       } else if (isCharacterEqualTo(c, EOF)) {
         return NULL;
       } else {
         printf("Line %d Error: Unknown Symbol <%c>\n", lineCount, c);
-        errorType  = 6;
-        lexerState = 55;
+        errorType         = 6;
+        lexerState        = 55;
+        backtrackingState = 55;
       }
       break;
     }
     case 1: {
+      if (lexDebug) printf("[DEBUG] Token is +\n and State is 1\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_PLUS, lex, lineCount, 0, NULL);
+      fillToken(t, TK_PLUS, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 2: {
+      if (lexDebug) printf("[DEBUG] Token is -\n and State is 2\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_MINUS, lex, lineCount, 0, NULL);
+      fillToken(t, TK_MINUS, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 3: {
+      if (lexDebug) printf("[DEBUG] Token is *\n and State is 3\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_MUL, lex, lineCount, 0, NULL);
+      fillToken(t, TK_MUL, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 4: {
+      if (lexDebug) printf("[DEBUG] Token is /\n and State is 4\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_DIV, lex, lineCount, 0, NULL);
+      fillToken(t, TK_DIV, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 5: {
+      if (lexDebug) printf("[DEBUG] Token is (\n and State is 5\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_OP, lex, lineCount, 0, NULL);
+      fillToken(t, TK_OP, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 6: {
+      if (lexDebug) printf("[DEBUG] Token is )\n and State is 6\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_CL, lex, lineCount, 0, NULL);
+      fillToken(t, TK_CL, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 7: {
+      if (lexDebug) printf("[DEBUG] Token is [\n and State is 7\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_SQL, lex, lineCount, 0, NULL);
+      fillToken(t, TK_SQL, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 8: {
+      if (lexDebug) printf("[DEBUG] Token is ]\n and State is 8\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_SQR, lex, lineCount, 0, NULL);
+      fillToken(t, TK_SQR, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 9: {
+      if (lexDebug) printf("[DEBUG] Token is ,\n and State is 9\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_COMMA, lex, lineCount, 0, NULL);
+      fillToken(t, TK_COMMA, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 10: {
+      if (lexDebug) printf("[DEBUG] Token is .\n and State is 10\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_DOT, lex, lineCount, 0, NULL);
+      fillToken(t, TK_DOT, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 11: {
+      if (lexDebug) printf("[DEBUG] Token is :\n and State is 11\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_COLON, lex, lineCount, 0, NULL);
+      fillToken(t, TK_COLON, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 12: {
+      if (lexDebug) printf("[DEBUG] Token is ;\n and State is 12\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_SEM, lex, lineCount, 0, NULL);
+      fillToken(t, TK_SEM, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 13: {
+      if (lexDebug) printf("[DEBUG] Token is !\n and State is 13\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_NOT, lex, lineCount, 0, NULL);
+      fillToken(t, TK_NOT, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 14: {
+
       c = nextChar();
       if (c == '=') {
+        if (lexDebug) printf("[DEBUG] Token is != and State is 14\n");
         lexerState = 15;
       } else {
+        if (lexDebug) printf("[DEBUG] Token is != and State is 15\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 15: {
+      if (lexDebug) printf("[DEBUG] Token is <\n and State is 15\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_NE, lex, lineCount, 0, NULL);
+      fillToken(t, TK_NE, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 16: {
+      if (lexDebug) printf("[DEBUG] Token is <= and State is 16\n");
       c = nextChar();
       if (c == '-') {
         lexerState = 17;
@@ -430,6 +486,7 @@ Token* getToken() {
       break;
     }
     case 17: {
+      if (lexDebug) printf("[DEBUG] Token is >= and State is 17\n");
       c = nextChar();
       if (c == '-') {
         lexerState = 18;
@@ -437,13 +494,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 18: {
+      if (lexDebug) printf("[DEBUG] Token is - and State is 18\n");
       c = nextChar();
       if (c == '-') {
         lexerState = 19;
@@ -451,40 +509,44 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 19: {
+      if (lexDebug) printf("[DEBUG] Token is <=\n and State is 19\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_ASSIGNOP, lex, lineCount, 0, NULL);
+      fillToken(t, TK_ASSIGNOP, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 20: {
+      if (lexDebug) printf("[DEBUG] Token is <=\n and State is 20\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_LE, lex, lineCount, 0, NULL);
+      fillToken(t, TK_LE, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 21: {
+      if (lexDebug) printf("[DEBUG] Token is <= and State is 21\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
 
       if (c == '\n')
-        populateToken(t, TK_LT, lex, lineCount - 1, 0, NULL);
+        fillToken(t, TK_LT, lex, lineCount - 1, 0, NULL);
       else
-        populateToken(t, TK_LT, lex, lineCount, 0, NULL);
+        fillToken(t, TK_LT, lex, lineCount, 0, NULL);
 
       accept();
       return t;
       break;
     }
     case 22: {
+      if (lexDebug) printf("[DEBUG] Token is >= and State is 22\n");
       c = nextChar();
       if (c == '=') {
         lexerState = 23;
@@ -494,40 +556,50 @@ Token* getToken() {
       break;
     }
     case 23: {
+
+      if (lexDebug) printf("[DEBUG] Token is >= and State is 23\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_GE, lex, lineCount, 0, NULL);
+      fillToken(t, TK_GE, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 24: {
+
+      if (lexDebug) printf("[DEBUG] Token is >= and State is 24\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (c == '\n')
-        populateToken(t, TK_GT, lex, lineCount - 1, 0, NULL);
+        fillToken(t, TK_GT, lex, lineCount - 1, 0, NULL);
       else
-        populateToken(t, TK_GT, lex, lineCount, 0, NULL);
+        fillToken(t, TK_GT, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 25: {
+
+      if (lexDebug) printf("[DEBUG] Token is >= and State is 24\n");
       c = nextChar();
       if (c == '=') {
+
+        if (lexDebug) printf("[DEBUG] Token is >=, State 23, Going 26\n");
         lexerState = 26;
       } else {
+        if (lexDebug) printf("[DEBUG] Token is >=, State 23, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 26: {
+      if (lexDebug) printf("[DEBUG] Token is >=\n and State is 26\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_EQ, lex, lineCount, 0, NULL);
+      fillToken(t, TK_EQ, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
@@ -535,12 +607,14 @@ Token* getToken() {
     case 27: {
       c = nextChar();
       if (c == '@') {
+        if (lexDebug) printf("[DEBUG] Token is @, State 27\n");
         lexerState = 28;
       } else {
+        if (lexDebug) printf("[DEBUG] Token is @, State 27, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
@@ -549,25 +623,29 @@ Token* getToken() {
     case 28: {
       c = nextChar();
       if (c == '@') {
+        if (lexDebug) printf("[DEBUG] Token is @, State 28\n");
         lexerState = 29;
       } else {
+        if (lexDebug) printf("[DEBUG] Token is @, State 28, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 29: {
+      if (lexDebug) printf("[DEBUG] Token is @\n and State is 29\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_OR, lex, lineCount, 0, NULL);
+      fillToken(t, TK_OR, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 30: {
+      if (lexDebug) printf("[DEBUG] Token is &, State 30\n");
       c = nextChar();
       if (c == '&') {
         lexerState = 31;
@@ -575,13 +653,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 31: {
+      if (lexDebug) printf("[DEBUG] Token is &, State 31\n");
       c = nextChar();
       if (c == '&') {
         lexerState = 32;
@@ -589,36 +668,41 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 32: {
+      if (lexDebug) printf("[DEBUG] Token is &\n and State is 32\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
-      populateToken(t, TK_AND, lex, lineCount, 0, NULL);
+      fillToken(t, TK_AND, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 33: {
+      if (lexDebug) printf("[DEBUG]  \n and State is 33\n");
       c = nextChar();
       while (c != '\n' && c != EOF) { c = nextChar(); }
       lexerState = 34;
       break;
     }
     case 34: {
+      if (lexDebug) printf("[DEBUG]  \n and State is 34\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (c == '\n')
-        populateToken(t, TK_COMMENT, lex, lineCount - 1, 0, NULL);
+        fillToken(t, TK_COMMENT, lex, lineCount - 1, 0, NULL);
       else
-        populateToken(t, TK_COMMENT, lex, lineCount, 0, NULL);
+        fillToken(t, TK_COMMENT, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 35: {
+      if (lexDebug) printf("[DEBUG]  \n and State is 35\n");
+      backtrackingState--;
       c = nextChar();
       if (isCharacterInRange(c, '2', '7')) {
         lexerState = 36;
@@ -630,6 +714,7 @@ Token* getToken() {
       break;
     }
     case 36: {
+      if (lexDebug) printf("[DEBUG]  , State 36, STARTING 37\n");
       c = nextChar();
       while (isCharacterInRange(c, 'b', 'd')) c = nextChar();
 
@@ -643,6 +728,7 @@ Token* getToken() {
       while (isCharacterInRange(c, '2', '7')) c = nextChar();
 
       if (!isCharacterInRange(c, '2', '7') && !isCharacterInRange(c, 'b', 'd')) {
+        if (lexDebug) printf("[DEBUG]  , State 37, Going 38\n");
         lexerState = 38;
       } else {
         printf("Line %d Error: Two identifiers are not allowed back to back without a break\n", lineCount);
@@ -652,6 +738,7 @@ Token* getToken() {
       break;
     }
     case 38: {
+      if (lexDebug) printf("[DEBUG]  , State 38\n");
       retract(1);
       int identifierLength = forward - lexemeStart + 1;
       if (identifierLength < 2) {
@@ -666,55 +753,55 @@ Token* getToken() {
       } else {
         char* lex = duplicateSubstring(lexemeStart, forward);
         if (c == '\n')
-          populateToken(t, TK_ID, lex, lineCount - 1, 0, NULL);
+          fillToken(t, TK_ID, lex, lineCount - 1, 0, NULL);
         else
-          populateToken(t, TK_ID, lex, lineCount, 0, NULL);
+          fillToken(t, TK_ID, lex, lineCount, 0, NULL);
         accept();
         return t;
       }
       break;
     }
     case 39: {
+      if (lexDebug) printf("[DEBUG]  , State 39\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (c == '\n')
-        populateToken(t, TK_ID, lex, lineCount - 1, 0, NULL);
+        fillToken(t, TK_ID, lex, lineCount - 1, 0, NULL);
       else
-        populateToken(t, TK_ID, lex, lineCount, 0, NULL);
+        fillToken(t, TK_ID, lex, lineCount, 0, NULL);
 
       accept();
       return t;
       break;
     }
     case 40: {
+      if (lexDebug) printf("[DEBUG]  , State 40\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z')) c = nextChar();
-
-      // We've now read all lowercase letters and hit a non-letter character
       lexerState = 41;
       break;
     }
     case 41: {
-      retract(1); // Retract to handle the non-letter character
-      char* lex = duplicateSubstring(lexemeStart, forward);
-
-      // Check if it's a keyword regardless of surrounding whitespace
-      struct Node* n = findKeyword(kt, lex);
+      // this broke something
+      if (lexDebug) printf("[DEBUG]  , State 41\n");
+      retract(1);
+      char*        lex = duplicateSubstring(lexemeStart, forward);
+      struct Node* n   = findKeyword(kt, lex);
       if (n == NULL) {
-        // Not a keyword, handle as FIELDID
-        populateToken(t, TK_FIELDID, lex, lineCount, 0, NULL);
+        fillToken(t, TK_FIELDID, lex, lineCount, 0, NULL);
       } else {
-        // It's a keyword (like "end"), set the appropriate token
-        populateToken(t, n->TOKEN_NAME, lex, lineCount, 0, NULL);
+        fillToken(t, n->tokenName, lex, lineCount, 0, NULL);
       }
       accept();
       return t;
     }
     case 42: {
+      if (lexDebug) printf("[DEBUG]  , State 42\n");
       c = nextChar();
       while (isCharacterInRange(c, '0', '9')) c = nextChar();
 
       if (c == '.') {
+        if (lexDebug) printf("[DEBUG]  , State 42, Going 44, Looking ., REAL NUMBER\n");
         lexerState = 44;
       } else {
         lexerState = 43;
@@ -722,19 +809,21 @@ Token* getToken() {
       break;
     }
     case 43: {
+      if (lexDebug) printf("[DEBUG]  , State 43, Looking NUMBER\n");
       retract(1);
-      char*  lex     = duplicateSubstring(lexemeStart, forward);
-      Value* val     = malloc(sizeof(Value));
-      val->INT_VALUE = stringToInteger(lex);
+      char* lex      = duplicateSubstring(lexemeStart, forward);
+      tVal* val      = malloc(sizeof(tVal));
+      val->INT_VALUE = str2int(lex);
       if (c == '\n')
-        populateToken(t, TK_NUM, lex, lineCount - 1, 1, val);
+        fillToken(t, TK_NUM, lex, lineCount - 1, 1, val);
       else
-        populateToken(t, TK_NUM, lex, lineCount, 1, val);
+        fillToken(t, TK_NUM, lex, lineCount, 1, val);
       accept();
       return t;
       break;
     }
     case 44: {
+      if (lexDebug) printf("[DEBUG]  , State 44\n");
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
         lexerState = 45;
@@ -742,13 +831,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 45: {
+      if (lexDebug) printf("[DEBUG]  , State 45\n");
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
         lexerState = 46;
@@ -756,7 +846,7 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
@@ -765,21 +855,22 @@ Token* getToken() {
     case 46: {
       c = nextChar();
       if (c == 'E') {
-        // Handle scientific notation
-        lexerState = 56; // New state for exponent part
+        if (lexDebug) printf("[DEBUG]  , State 46, Going 56, Real NumPath\n");
+        // handle scientific notation
+        lexerState = 56;
       } else {
-        // Normal real number without exponent
         retract(1);
-        char*  lex       = duplicateSubstring(lexemeStart, forward);
-        Value* val       = (Value*)malloc(sizeof(Value));
-        val->FLOAT_VALUE = stringToFloat(lex);
-        populateToken(t, TK_RNUM, lex, lineCount, 2, val);
+        char* lex        = duplicateSubstring(lexemeStart, forward);
+        tVal* val        = (tVal*)malloc(sizeof(tVal));
+        val->FLOAT_VALUE = str2flt(lex);
+        fillToken(t, TK_RNUM, lex, lineCount, 2, val);
         accept();
         return t;
       }
       break;
     }
     case 47: {
+      if (lexDebug) printf("[DEBUG]  , State 47\n");
       c = nextChar();
       if (isCharacterInRange(c, 'a', 'z') || isCharacterInRange(c, 'A', 'Z')) {
         lexerState = 48;
@@ -787,13 +878,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 48: {
+      if (lexDebug) printf("[DEBUG]  , State 48\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z') || isCharacterInRange(c, 'A', 'Z')) c = nextChar();
 
@@ -805,11 +897,10 @@ Token* getToken() {
       break;
     }
     case 49: {
+      if (lexDebug) printf("[DEBUG]  , State 49\n");
       c = nextChar();
       while (isCharacterInRange(c, '0', '9')) c = nextChar();
-
       lexerState = 50;
-
       break;
     }
     case 50: {
@@ -822,34 +913,36 @@ Token* getToken() {
       } else {
         char* lex = duplicateSubstring(lexemeStart, forward);
         if (c == '\n')
-          populateToken(t, TK_FUNID, lex, lineCount - 1, 0, NULL);
+          fillToken(t, TK_FUNID, lex, lineCount - 1, 0, NULL);
         else
-          populateToken(t, TK_FUNID, lex, lineCount, 0, NULL);
+          fillToken(t, TK_FUNID, lex, lineCount, 0, NULL);
         accept();
         return t;
       }
       break;
     }
     case 51: {
+      if (lexDebug) printf("[DEBUG]  , State 51\n");
       retract(1);
       char*        lex = duplicateSubstring(lexemeStart, forward);
       struct Node* n   = findKeyword(kt, lex);
       if (n == NULL) {
         if (c == '\n')
-          populateToken(t, TK_FUNID, lex, lineCount - 1, 0, NULL);
+          fillToken(t, TK_FUNID, lex, lineCount - 1, 0, NULL);
         else
-          populateToken(t, TK_FUNID, lex, lineCount, 0, NULL);
+          fillToken(t, TK_FUNID, lex, lineCount, 0, NULL);
       } else {
         if (c == '\n')
-          populateToken(t, n->TOKEN_NAME, lex, lineCount - 1, 0, NULL);
+          fillToken(t, n->tokenName, lex, lineCount - 1, 0, NULL);
         else
-          populateToken(t, n->TOKEN_NAME, lex, lineCount, 0, NULL);
+          fillToken(t, n->tokenName, lex, lineCount, 0, NULL);
       }
       accept();
       return t;
       break;
     }
     case 52: {
+      if (lexDebug) printf("[DEBUG]  , State 52\n");
       c = nextChar();
       if (isCharacterInRange(c, 'a', 'z')) {
         lexerState = 53;
@@ -857,13 +950,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
     case 53: {
+      if (lexDebug) printf("[DEBUG]  , State 53\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z')) c = nextChar();
 
@@ -871,27 +965,29 @@ Token* getToken() {
       break;
     }
     case 54: {
+      if (lexDebug) printf("[DEBUG]  , State 54\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (c == '\n')
-        populateToken(t, TK_RUID, lex, lineCount - 1, 0, NULL);
+        fillToken(t, TK_RUID, lex, lineCount - 1, 0, NULL);
       else
-        populateToken(t, TK_RUID, lex, lineCount, 0, NULL);
+        fillToken(t, TK_RUID, lex, lineCount, 0, NULL);
       accept();
       return t;
       break;
     }
     case 55: {
       char* lex = duplicateSubstring(lexemeStart, forward);
-      if (errorType == 3 && c == '\n')
-        populateToken(t, TK_ERR, lex, lineCount - 1, errorType, NULL);
+      if (errorType == 11 && c == '\n')
+        fillToken(t, TK_ERR, lex, lineCount - 1, errorType, NULL);
       else
-        populateToken(t, TK_ERR, lex, lineCount, errorType, NULL);
+        fillToken(t, TK_ERR, lex, lineCount, errorType, NULL);
       accept();
       return t;
       break;
     }
     case 56: {
+      if (lexDebug) printf("[DEBUG]  , State 56\n");
       c = nextChar();
       if (c == '+' || c == '-' || isCharacterInRange(c, '0', '9')) {
         if (c == '+' || c == '-') {
@@ -905,14 +1001,14 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
       break;
     }
-
     case 57: {
+      if (lexDebug) printf("[DEBUG]  , State 57\n");
       // Read first exponent digit
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
@@ -921,7 +1017,7 @@ Token* getToken() {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
@@ -929,21 +1025,22 @@ Token* getToken() {
     }
 
     case 58: {
+      if (lexDebug) printf("[DEBUG]  , State 58\n");
       // Read second exponent digit
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
         // Successfully parsed scientific notation
-        char*  lex       = duplicateSubstring(lexemeStart, forward);
-        Value* val       = (Value*)malloc(sizeof(Value));
-        val->FLOAT_VALUE = stringToFloat(lex);
-        populateToken(t, TK_RNUM, lex, lineCount, 2, val);
+        char* lex        = duplicateSubstring(lexemeStart, forward);
+        tVal* val        = (tVal*)malloc(sizeof(tVal));
+        val->FLOAT_VALUE = str2flt(lex);
+        fillToken(t, TK_RNUM, lex, lineCount, 2, val);
         accept();
         return t;
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
-        errorType  = 3;
+        errorType  = 11;
         lexerState = 55;
         retract(1);
       }
@@ -955,7 +1052,7 @@ Token* getToken() {
 
 void removeComments(char* testCaseFile, char* cleanFile) {
   int tcf = open(testCaseFile, O_RDONLY);
-  initializeBuffers(tcf);
+  setupBuffers(tcf);
   int  check = 0;
   char c;
   while ((c = nextChar()) != EOF) {
@@ -990,10 +1087,4 @@ void removeComments(char* testCaseFile, char* cleanFile) {
     }
   }
   close(tcf);
-}
-
-void printBuffers() {
-  char c;
-  while ((c = nextChar()) != EOF) { printf("%c ", c); }
-  printf("\n");
 }

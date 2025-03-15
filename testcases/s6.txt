@@ -1,0 +1,50 @@
+%Function to calculate area and perimeter of a rectangle
+_rectangleCalculations input parameter list [int b3d22, int c5d33]
+output parameter list [record #dimensions d4c67];
+	d4c67.area <--- b3d22 * c5d33;
+	d4c67.perimeter <--- 2 * (b3d22 + c5d33);
+	return [d4c67];
+end
+
+%Function to calculate area and perimeter of a circle
+_circleCalculations input parameter list [int b4d56]
+output parameter list [record #dimensions c3d45];
+	type real : c6d24;
+	c6d24 <--- 3.14;
+	
+	c3d45.area <--- c6d24 * b4d56 * b4d56;
+	c3d45.perimeter <--- 2 * c6d24 * b4d56;
+	
+	return [c3d45];
+end
+
+_main
+	record #dimensions
+		type real : area;
+		type real : perimeter;
+	endrecord
+	
+	type int : b3d22;
+	type int : c5d33;
+	type int : b4d56;
+	type int : d2c36;
+	type record #dimensions : d4c67;
+	type record #dimensions : c3d45;
+	
+	read(d2c36);
+	
+	if (d2c36 == 1) then
+		read(b3d22);
+		read(c5d33);
+		[d4c67] <--- call _rectangleCalculations with parameters [b3d22, c5d33];
+		write(d4c67.area);
+		write(d4c67.perimeter);
+	else
+		read(b4d56);
+		[c3d45] <--- call _circleCalculations with parameters [b4d56];
+		write(c3d45.area);
+		write(c3d45.perimeter);
+	endif
+	
+	return;
+end

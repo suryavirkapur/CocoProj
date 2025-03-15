@@ -1,0 +1,83 @@
+_vectorOperations input parameter list [record #vector b5d67, record #vector c4d56]
+output parameter list [record #vector d3c45, real b6d23];
+	d3c45.x <--- b5d67.x + c4d56.x;
+	d3c45.y <--- b5d67.y + c4d56.y;
+	d3c45.z <--- b5d67.z + c4d56.z;
+	
+	b6d23 <--- (b5d67.x * c4d56.x) + (b5d67.y * c4d56.y) + (b5d67.z * c4d56.z);
+	
+	return [d3c45, b6d23];
+end
+
+_distanceBetweenPoints input parameter list [record #point b3d56, record #point c5d34]
+output parameter list [real d4c67];
+	type real : d7b22;
+	type real : c3d45;
+	type real : b6d34;
+	
+	d7b22 <--- (b3d56.x - c5d34.x) * (b3d56.x - c5d34.x);
+	c3d45 <--- (b3d56.y - c5d34.y) * (b3d56.y - c5d34.y);
+	b6d34 <--- (b3d56.z - c5d34.z) * (b3d56.z - c5d34.z);
+	
+	d4c67 <--- 0.00;
+	d4c67 <--- d7b22 + c3d45 + b6d34;
+	
+	return [d4c67];
+end
+
+_main
+	record #point
+		type real : x;
+		type real : y;
+		type real : z;
+	endrecord
+	
+	definetype record #point as #vector
+	
+	union #geometry
+		type #vector : vec;
+		type #point : pt;
+	endunion
+	
+	type record #point : b3d56;
+	type record #point : c5d34;
+	type record #vector : b5d67;
+	type record #vector : c4d56;
+	type record #vector : d3c45;
+	type real : d4c67;
+	type real : b6d23;
+	type int : d2c36;
+	
+	read(d2c36);
+	
+	if (d2c36 == 1) then
+		% Vector operations
+		read(b5d67.x);
+		read(b5d67.y);
+		read(b5d67.z);
+		read(c4d56.x);
+		read(c4d56.y);
+		read(c4d56.z);
+		
+		[d3c45, b6d23] <--- call _vectorOperations with parameters [b5d67, c4d56];
+		
+		write(d3c45.x);
+		write(d3c45.y);
+		write(d3c45.z);
+		write(b6d23);
+	else
+		% Distance calculation
+		read(b3d56.x);
+		read(b3d56.y);
+		read(b3d56.z);
+		read(c5d34.x);
+		read(c5d34.y);
+		read(c5d34.z);
+		
+		[d4c67] <--- call _distanceBetweenPoints with parameters [b3d56, c5d34];
+		
+		write(d4c67);
+	endif
+	
+	return;
+end

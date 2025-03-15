@@ -1,0 +1,55 @@
+_calculateArea input parameter list [union #shape d5c23]
+output parameter list [real c6b24];
+	type real : b5c37;
+
+	if (d5c23.tag == 1) then
+		b5c37 <--- d5c23.value.rectangle.length * d5c23.value.rectangle.width;
+		c6b24 <--- b5c37;
+	else
+		b5c37 <--- 3.14 * d5c23.value.circle.radius * d5c23.value.circle.radius;
+		c6b24 <--- b5c37;
+	endif
+
+	return [c6b24];
+end
+
+_main
+	record #rectangle
+		type real : length;
+		type real : width;
+	endrecord
+
+	record #circle
+		type real : radius;
+	endrecord
+
+	union #shape
+		type #rectangle : rectangle;
+		type #circle : circle;
+	endunion
+
+	record #shapeWrapper
+		type int : tag;
+		type #shape : value;
+	endrecord
+
+	type record #shapeWrapper : d5c23;
+	type real : c6b24;
+	type int : b3d22;
+
+	read(b3d22);
+
+	if (b3d22 == 1) then
+		d5c23.tag <--- 1;
+		read(d5c23.value.rectangle.length);
+		read(d5c23.value.rectangle.width);
+	else
+		d5c23.tag <--- 2;
+		read(d5c23.value.circle.radius);
+	endif
+
+	[c6b24] <--- call _calculateArea with parameters [d5c23];
+	write(c6b24);
+
+	return;
+end

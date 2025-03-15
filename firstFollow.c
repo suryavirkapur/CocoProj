@@ -11,7 +11,6 @@ Group No. 46
 #include <stdio.h>
 #include <stdlib.h>
 
-/* DEBUG ONLY: Global array to track processed non-terminals */
 extern bool nonTerminalProcessed[];
 
 void initialiseCheckIfDone() {
@@ -285,7 +284,7 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
 }
 
 void populateFollowTillStable(int** followVector, int** firstVector, struct Grammar* parsedGrammar) {
-  /* DEBUG ONLY: Starting follow set computation */
+
   printf("[DEBUG] Starting populateFollowTillStable\n");
 
   if (followVector == NULL || firstVector == NULL || parsedGrammar == NULL) {
@@ -293,7 +292,6 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
     return;
   }
 
-  /* DEBUG ONLY: Allocating memory for tracking changes */
   printf("[DEBUG] Allocating previous FOLLOW sets\n");
   int** prevFollowVector = (int**)malloc(NUM_NONTERMINALS * sizeof(int*));
   if (prevFollowVector == NULL) {
@@ -312,7 +310,6 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
     }
   }
 
-  /* DEBUG ONLY: Initial setup for follow set */
   printf("[DEBUG] Adding $ to FOLLOW(program)\n");
   if (program >= 0 && program < NUM_NONTERMINALS && TK_DOLLAR >= 0 && TK_DOLLAR < NUM_TERMINALS) {
     followVector[program][TK_DOLLAR]     = 1;
@@ -325,7 +322,6 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
   const int MAX_ITERATIONS = 100;
 
   while (iteration < MAX_ITERATIONS) {
-    /* DEBUG ONLY: Iteration tracking */
     printf("[DEBUG] FOLLOW iteration %d\n", iteration + 1);
     populateFollow(followVector, firstVector, parsedGrammar);
 
@@ -341,7 +337,6 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
 
   checkStability:
     if (stable) {
-      /* DEBUG ONLY: Follow sets have stabilized */
       printf("[DEBUG] FOLLOW sets stable after %d iterations\n", iteration + 1);
       break;
     }
@@ -360,7 +355,6 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
   for (int i = 0; i < NUM_NONTERMINALS; i++) { free(prevFollowVector[i]); }
   free(prevFollowVector);
 
-  /* DEBUG ONLY: Completion message */
   printf("[DEBUG] FOLLOW sets computation complete\n");
 }
 
@@ -370,10 +364,8 @@ void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets) {
     return;
   }
 
-  /* DEBUG ONLY: Begin verification */
   printf("[DEBUG] Verifying First and Follow sets...\n");
 
-  /* Print table header with improved formatting */
   printf("\n+-------------------------------------------------------------------------+\n");
   printf("| %-15s | %-25s | %-25s |\n", "Non-terminal", "FIRST Set", "FOLLOW Set");
   printf("|-----------------|---------------------------|---------------------------|\n");
@@ -388,10 +380,8 @@ void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets) {
       continue;
     }
 
-    /* Print non-terminal name */
     printf("| %-15s | ", getNonTerminal(i));
 
-    /* Print FIRST set with better formatting */
     bool first        = true;
     bool isEmptyFirst = true;
     printf("{");
@@ -409,10 +399,8 @@ void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets) {
     }
     if (isEmptyFirst) { printf("∅"); }
 
-    /* Add padding for consistent column width */
     printf("%-*s | ", isEmptyFirst ? 24 : 25 - (int)printf("}"), "");
 
-    /* Print FOLLOW set with better formatting */
     first              = true;
     bool isEmptyFollow = true;
     printf("{");
@@ -429,12 +417,10 @@ void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets) {
   }
   printf("+-------------------------------------------------------------------------+\n");
 
-  /* DEBUG ONLY: Completion message */
   printf("[DEBUG] First and Follow verification complete\n");
 }
 
 struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) {
-  /* DEBUG ONLY: Beginning computation process */
   printf("[DEBUG] Starting first and follow computation\n");
 
   if (parsedGrammar == NULL) {
@@ -442,7 +428,6 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     return NULL;
   }
 
-  /* DEBUG ONLY: Structure creation */
   printf("[DEBUG] Creating FirstAndFollow structure\n");
   struct FirstAndFollow* firstAndFollowSets = (struct FirstAndFollow*)malloc(sizeof(struct FirstAndFollow));
   if (firstAndFollowSets == NULL) {
@@ -450,7 +435,6 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     return NULL;
   }
 
-  /* DEBUG ONLY: Allocating arrays */
   printf("[DEBUG] Allocating FIRST array\n");
   firstAndFollowSets->FIRST = (int**)malloc(sizeof(int*) * NUM_NONTERMINALS);
   if (firstAndFollowSets->FIRST == NULL) {
@@ -468,7 +452,6 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     return NULL;
   }
 
-  /* DEBUG ONLY: Initialization */
   printf("[DEBUG] Initializing arrays\n");
   int symbolVectorSize = NUM_TERMINALS;
 
@@ -500,11 +483,9 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     }
   }
 
-  /* DEBUG ONLY: Initializing flags */
   printf("[DEBUG] Initializing processing flags\n");
   for (int i = 0; i < NUM_NONTERMINALS; i++) { nonTerminalProcessed[i] = false; }
 
-  /* DEBUG ONLY: Computing FIRST sets */
   printf("[DEBUG] Computing FIRST sets\n");
   for (int i = 0; i < NUM_NONTERMINALS; i++) {
     if (!nonTerminalProcessed[i]) {
@@ -517,13 +498,12 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
     }
   }
 
-  /* DEBUG ONLY: Computing FOLLOW sets */
   printf("[DEBUG] Computing FOLLOW sets\n");
   firstAndFollowSets->FOLLOW[program][TK_DOLLAR] = 1;
 
   populateFollowTillStable(firstAndFollowSets->FOLLOW, firstAndFollowSets->FIRST, parsedGrammar);
   verifyFirstAndFollow(firstAndFollowSets);
-  /* DEBUG ONLY: Completion message */
+
   printf("[DEBUG] First and Follow computation complete\n");
   return firstAndFollowSets;
 }

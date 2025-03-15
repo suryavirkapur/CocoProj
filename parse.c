@@ -109,7 +109,7 @@ int isSynchronizingToken(TokenName token) {
 }
 
 Token* skipComments(Token* token) {
-  while (token != NULL && token->TOKEN_NAME == TK_COMMENT) { token = getToken(); }
+  while (token != NULL && token->tokenName == TK_COMMENT) { token = getToken(); }
   return token;
 }
 
@@ -120,11 +120,11 @@ Token* createTokenCopy(Token* original) {
   Token* copy = (Token*)malloc(sizeof(Token));
   if (copy == NULL) return NULL;
 
-  copy->LEXEME     = copyLexeme(original->LEXEME);
-  copy->LINE_NO    = original->LINE_NO;
-  copy->TOKEN_NAME = original->TOKEN_NAME;
-  copy->IS_NUMBER  = original->IS_NUMBER;
-  copy->VALUE      = original->VALUE;
+  copy->tLexeme   = copyLexeme(original->tLexeme);
+  copy->lineNum   = original->lineNum;
+  copy->tokenName = original->tokenName;
+  copy->isNum     = original->isNum;
+  copy->VALUE     = original->VALUE;
 
   return copy;
 }
@@ -134,11 +134,11 @@ Token* createSyntheticToken(int tokenType, int lineNo) {
   Token* synthetic = (Token*)malloc(sizeof(Token));
   if (synthetic == NULL) return NULL;
 
-  synthetic->LEXEME     = copyLexeme("ERROR_SYNTHETIC");
-  synthetic->LINE_NO    = lineNo;
-  synthetic->TOKEN_NAME = tokenType;
-  synthetic->IS_NUMBER  = 0;
-  synthetic->VALUE      = NULL;
+  synthetic->tLexeme   = copyLexeme("ERROR_SYNTHETIC");
+  synthetic->lineNum   = lineNo;
+  synthetic->tokenName = tokenType;
+  synthetic->isNum     = 0;
+  synthetic->VALUE     = NULL;
 
   return synthetic;
 }
@@ -167,7 +167,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
   }
 
   // Initialize components
-  initializeLexer(fd);
+  setupLexer(fd);
   struct ParseTree* pt = initializeParseTree();
   struct Stack*     st = initializeStack(pt);
 
@@ -178,7 +178,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
   // Get first token
   Token* inputToken = getToken();
   // Skip comments
-  while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+  while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
 
   if (inputToken == NULL) {
     printf("Empty input file or only comments\n");
@@ -191,17 +191,17 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
     if (inputToken == NULL) { break; }
 
     // Skip comments
-    if (inputToken->TOKEN_NAME == TK_COMMENT) {
+    if (inputToken->tokenName == TK_COMMENT) {
       inputToken = getToken();
       continue;
     }
 
     // Handle lexical errors
-    if (inputToken->TOKEN_NAME == TK_ERR) {
+    if (inputToken->tokenName == TK_ERR) {
       lexicalErrorOccurred = true;
       // Get next token and continue
       inputToken = getToken();
-      while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+      while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
       continue;
     }
 
@@ -216,30 +216,30 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
     if (stackTop->IS_LEAF_NODE == 1) {
       // Check for end of parsing
       if (stackTop->NODE_TYPE.L.ENUM_ID == TK_DOLLAR) {
-        if (inputToken == NULL || inputToken->TOKEN_NAME == TK_EOF) {
+        if (inputToken == NULL || inputToken->tokenName == TK_EOF) {
           // Successful parse
           break;
         }
         // Handle extra tokens
         syntaxErrorOccurred = true;
         // Just consume the remaining tokens
-        while (inputToken != NULL && inputToken->TOKEN_NAME != TK_EOF) {
+        while (inputToken != NULL && inputToken->tokenName != TK_EOF) {
           inputToken = getToken();
           // Skip comments
-          while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+          while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
         }
         break;
       }
 
       // Terminal matches input token
-      if (inputToken->TOKEN_NAME == stackTop->NODE_TYPE.L.ENUM_ID) {
+      if (inputToken->tokenName == stackTop->NODE_TYPE.L.ENUM_ID) {
         // Store token in parse tree
         stackTop->NODE_TYPE.L.TOKEN = createTokenCopy(inputToken);
 
         // Consume token and pop stack
         pop(st);
         inputToken = getToken();
-        while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+        while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
         continue;
       }
       // Terminal does not match input token - syntax error
@@ -247,14 +247,14 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
         // Report the error
         fprintf(stderr,
                 "Syntax error at line %d: Expected %s, found %s\n",
-                inputToken->LINE_NO,
+                inputToken->lineNum,
                 getTerminal(stackTop->NODE_TYPE.L.ENUM_ID),
-                getTerminal(inputToken->TOKEN_NAME));
+                getTerminal(inputToken->tokenName));
 
         syntaxErrorOccurred = true;
 
         // Create synthetic token for the parse tree
-        stackTop->NODE_TYPE.L.TOKEN = createSyntheticToken(stackTop->NODE_TYPE.L.ENUM_ID, inputToken->LINE_NO);
+        stackTop->NODE_TYPE.L.TOKEN = createSyntheticToken(stackTop->NODE_TYPE.L.ENUM_ID, inputToken->lineNum);
 
         // Pop terminal without consuming input
         pop(st);
@@ -264,7 +264,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
     // Case 2: Non-terminal on top of the stack
     else {
       int nonTerminalID = stackTop->NODE_TYPE.NL.ENUM_ID;
-      int tokenID       = inputToken->TOKEN_NAME;
+      int tokenID       = inputToken->tokenName;
 
       // Bounds check before accessing parsing table
       if (nonTerminalID < 0 || nonTerminalID >= NUM_NONTERMINALS || tokenID < 0 || tokenID >= NUM_TERMINALS) {
@@ -273,7 +273,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
 
         // Skip this token and continue
         inputToken = getToken();
-        while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+        while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
         continue;
       }
 
@@ -320,7 +320,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
       else {
         fprintf(stderr,
                 "Syntax error at line %d: Unexpected token %s for non-terminal %s\n",
-                inputToken->LINE_NO,
+                inputToken->lineNum,
                 getTerminal(tokenID),
                 getNonTerminal(nonTerminalID));
 
@@ -365,7 +365,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
           // Skip current token and continue
           printf("Error recovery: Skipping token %s\n", getTerminal(tokenID));
           inputToken = getToken();
-          while (inputToken != NULL && inputToken->TOKEN_NAME == TK_COMMENT) { inputToken = getToken(); }
+          while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
         }
       }
     }
@@ -398,8 +398,8 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
 
     // Fill lexeme field
     if (tokenEnumID != TK_EPS) {
-      if (pt->NODE_TYPE.L.TOKEN != NULL && pt->NODE_TYPE.L.TOKEN->LEXEME != NULL) {
-        strncpy(lexeme, pt->NODE_TYPE.L.TOKEN->LEXEME, strlen(pt->NODE_TYPE.L.TOKEN->LEXEME));
+      if (pt->NODE_TYPE.L.TOKEN != NULL && pt->NODE_TYPE.L.TOKEN->tLexeme != NULL) {
+        strncpy(lexeme, pt->NODE_TYPE.L.TOKEN->tLexeme, strlen(pt->NODE_TYPE.L.TOKEN->tLexeme));
       } else {
         strncpy(lexeme, "----", 4);
       }
@@ -414,8 +414,8 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     float valueIfFloat = 0.0;
 
     if (tokenEnumID != TK_EPS && pt->NODE_TYPE.L.TOKEN != NULL) {
-      lineNumber = pt->NODE_TYPE.L.TOKEN->LINE_NO;
-      isNumber   = pt->NODE_TYPE.L.TOKEN->IS_NUMBER;
+      lineNumber = pt->NODE_TYPE.L.TOKEN->lineNum;
+      isNumber   = pt->NODE_TYPE.L.TOKEN->isNum;
       if (isNumber == 1 && pt->NODE_TYPE.L.TOKEN->VALUE != NULL)
         valueIfInt = pt->NODE_TYPE.L.TOKEN->VALUE->INT_VALUE;
       else if (isNumber == 2 && pt->NODE_TYPE.L.TOKEN->VALUE != NULL)
@@ -512,16 +512,16 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     struct NaryTreeNode* lineTrav = pt->NODE_TYPE.NL.child;
     while (lineTrav != NULL && derivedLineNumber == -1) {
       if (lineTrav->IS_LEAF_NODE == 1 && lineTrav->NODE_TYPE.L.TOKEN != NULL &&
-          lineTrav->NODE_TYPE.L.TOKEN->LINE_NO > 0) {
-        derivedLineNumber = lineTrav->NODE_TYPE.L.TOKEN->LINE_NO;
+          lineTrav->NODE_TYPE.L.TOKEN->lineNum > 0) {
+        derivedLineNumber = lineTrav->NODE_TYPE.L.TOKEN->lineNum;
         break;
       } else if (lineTrav->IS_LEAF_NODE == 0) {
         // Try to find in non-leaf child's children recursively
         struct NaryTreeNode* childTrav = lineTrav->NODE_TYPE.NL.child;
         while (childTrav != NULL && derivedLineNumber == -1) {
           if (childTrav->IS_LEAF_NODE == 1 && childTrav->NODE_TYPE.L.TOKEN != NULL &&
-              childTrav->NODE_TYPE.L.TOKEN->LINE_NO > 0) {
-            derivedLineNumber = childTrav->NODE_TYPE.L.TOKEN->LINE_NO;
+              childTrav->NODE_TYPE.L.TOKEN->lineNum > 0) {
+            derivedLineNumber = childTrav->NODE_TYPE.L.TOKEN->lineNum;
             break;
           }
           childTrav = childTrav->next;

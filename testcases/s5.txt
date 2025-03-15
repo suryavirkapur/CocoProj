@@ -1,0 +1,29 @@
+% Program demonstrating while loop
+
+_factorial input parameter list [int b3d5] 
+output parameter list [int d2b7];
+	type int : c4b2;
+	type int : b5d23;
+	
+	b5d23 <--- 1;
+	c4b2 <--- 1;
+	
+	while (c4b2 <= b3d5)
+		b5d23 <--- b5d23 * c4b2;
+		c4b2 <--- c4b2 + 1;
+	endwhile
+	
+	d2b7 <--- b5d23;
+	return [d2b7];
+end
+
+_main
+	type int : d5c34;
+	type int : b7d23;
+	
+	read(d5c34);
+	[b7d23] <--- call _factorial with parameters [d5c34];
+	write(b7d23);
+	
+	return;
+end
