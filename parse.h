@@ -1,6 +1,7 @@
 #ifndef PARSE_H
 #define PARSE_H
 
+#include <stdio.h>
 #include "dataStructures.h"
 #include "grammar.h"
 #include "firstFollow.h"

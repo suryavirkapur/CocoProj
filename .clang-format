@@ -1,0 +1,30 @@
+BasedOnStyle: LLVM
+ColumnLimit: 120
+IndentWidth: 4
+UseTab: Never
+TabWidth: 4
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: false
+  AfterControlStatement: false
+  AfterClass: false
+  AfterStruct: false
+  AfterUnion: false
+  BeforeElse: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortBlocksOnASingleLine: true # Allow short blocks on a single line.
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: true # Allow short if statements on single line.
+AllowShortLoopsOnASingleLine: true # Allow short loops on single line.
+PointerAlignment: Left
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+AlignOperands: true
+AlignTrailingComments: true
+BinPackArguments: false
+BinPackParameters: false
+MaxEmptyLinesToKeep: 1

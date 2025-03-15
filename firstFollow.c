@@ -6,19 +6,16 @@ Group No. 46
 - Harshwardhan Sugam (2022A7PS0114P)
 */
 
-
-#include <stdio.h>
-#include <stdlib.h>
 #include "firstFollow.h"
 #include "constants.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 /* DEBUG ONLY: Global array to track processed non-terminals */
 extern bool nonTerminalProcessed[];
 
 void initialiseCheckIfDone() {
-    for (int i = 0; i < NUM_NONTERMINALS; i++) {
-        nonTerminalProcessed[i] = false;
-    }
+    for (int i = 0; i < NUM_NONTERMINALS; i++) { nonTerminalProcessed[i] = false; }
 }
 
 struct FirstAndFollow* createFirstAndFollowSets() {
@@ -85,24 +82,25 @@ void computeFirstSets(int** firstVector, int enumId) {
         return;
     }
 
-    if (nonTerminalProcessed[enumId]) {
-        return;
-    }
+    if (nonTerminalProcessed[enumId]) { return; }
 
     nonTerminalProcessed[enumId] = true;
 
     if (nonTerminalRuleRecords[enumId] == NULL) {
-        fprintf(stderr, "Error: NULL rule record for non-terminal %d (%s)\n",
-                enumId, getNonTerminal(enumId));
+        fprintf(stderr, "Error: NULL rule record for non-terminal %d (%s)\n", enumId, getNonTerminal(enumId));
         return;
     }
 
     int ruleStartIndex = nonTerminalRuleRecords[enumId]->start;
-    int ruleEndIndex = nonTerminalRuleRecords[enumId]->end;
+    int ruleEndIndex   = nonTerminalRuleRecords[enumId]->end;
 
     if (ruleStartIndex < 1 || ruleEndIndex >= parsedGrammar->GRAMMAR_RULES_SIZE) {
-        fprintf(stderr, "Error: Invalid rule range [%d, %d] for non-terminal %d (%s)\n",
-                ruleStartIndex, ruleEndIndex, enumId, getNonTerminal(enumId));
+        fprintf(stderr,
+                "Error: Invalid rule range [%d, %d] for non-terminal %d (%s)\n",
+                ruleStartIndex,
+                ruleEndIndex,
+                enumId,
+                getNonTerminal(enumId));
         return;
     }
 
@@ -141,19 +139,14 @@ void computeFirstSets(int** firstVector, int enumId) {
             int nextNonTerminalId = firstRhsSymbol->TYPE.NON_TERMINAL;
 
             if (nextNonTerminalId < 0 || nextNonTerminalId >= NUM_NONTERMINALS) {
-                fprintf(stderr, "Error: Invalid non-terminal ID %d in rule %d\n",
-                        nextNonTerminalId, ruleIndex);
+                fprintf(stderr, "Error: Invalid non-terminal ID %d in rule %d\n", nextNonTerminalId, ruleIndex);
                 continue;
             }
 
-            if (!nonTerminalProcessed[nextNonTerminalId]) {
-                computeFirstSets(firstVector, nextNonTerminalId);
-            }
+            if (!nonTerminalProcessed[nextNonTerminalId]) { computeFirstSets(firstVector, nextNonTerminalId); }
 
             for (int i = 0; i < NUM_TERMINALS; i++) {
-                if (i != TK_EPS && firstVector[nextNonTerminalId][i] == 1) {
-                    firstVector[enumId][i] = 1;
-                }
+                if (i != TK_EPS && firstVector[nextNonTerminalId][i] == 1) { firstVector[enumId][i] = 1; }
             }
 
             if (firstVector[nextNonTerminalId][TK_EPS] == 1) {
@@ -170,8 +163,10 @@ void computeFirstSets(int** firstVector, int enumId) {
                         int nextNextNonTerminalId = nextSymbol->TYPE.NON_TERMINAL;
 
                         if (nextNextNonTerminalId < 0 || nextNextNonTerminalId >= NUM_NONTERMINALS) {
-                            fprintf(stderr, "Error: Invalid non-terminal ID %d in rule %d\n",
-                                    nextNextNonTerminalId, ruleIndex);
+                            fprintf(stderr,
+                                    "Error: Invalid non-terminal ID %d in rule %d\n",
+                                    nextNextNonTerminalId,
+                                    ruleIndex);
                             break;
                         }
 
@@ -185,16 +180,12 @@ void computeFirstSets(int** firstVector, int enumId) {
                             }
                         }
 
-                        if (firstVector[nextNextNonTerminalId][TK_EPS] == 0) {
-                            break;
-                        }
+                        if (firstVector[nextNextNonTerminalId][TK_EPS] == 0) { break; }
                     }
                     nextSymbol = nextSymbol->next;
                 }
 
-                if (nextSymbol == NULL) {
-                    firstVector[enumId][TK_EPS] = 1;
-                }
+                if (nextSymbol == NULL) { firstVector[enumId][TK_EPS] = 1; }
             }
         }
     }
@@ -204,9 +195,7 @@ void populateFirst(int** firstVector, struct Grammar* parsedGrammar) {
     initialiseCheckIfDone();
 
     for (int i = 0; i < NUM_NONTERMINALS; i++) {
-        if (!nonTerminalProcessed[i]) {
-            computeFirstSets(firstVector, i);
-        }
+        if (!nonTerminalProcessed[i]) { computeFirstSets(firstVector, i); }
     }
 }
 
@@ -239,8 +228,7 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
         int lhsNonTerminalId = lhsSymbol->TYPE.NON_TERMINAL;
 
         if (lhsNonTerminalId < 0 || lhsNonTerminalId >= NUM_NONTERMINALS) {
-            fprintf(stderr, "Error: Invalid LHS non-terminal ID %d in rule %d\n",
-                    lhsNonTerminalId, ruleIndex);
+            fprintf(stderr, "Error: Invalid LHS non-terminal ID %d in rule %d\n", lhsNonTerminalId, ruleIndex);
             continue;
         }
 
@@ -255,8 +243,7 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
             int currentNonTerminalId = currentSymbol->TYPE.NON_TERMINAL;
 
             if (currentNonTerminalId < 0 || currentNonTerminalId >= NUM_NONTERMINALS) {
-                fprintf(stderr, "Error: Invalid RHS non-terminal ID %d in rule %d\n",
-                        currentNonTerminalId, ruleIndex);
+                fprintf(stderr, "Error: Invalid RHS non-terminal ID %d in rule %d\n", currentNonTerminalId, ruleIndex);
                 currentSymbol = currentSymbol->next;
                 continue;
             }
@@ -265,9 +252,7 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
 
             if (nextSymbol == NULL) {
                 for (int i = 0; i < NUM_TERMINALS; i++) {
-                    if (followVector[lhsNonTerminalId][i] == 1) {
-                        followVector[currentNonTerminalId][i] = 1;
-                    }
+                    if (followVector[lhsNonTerminalId][i] == 1) { followVector[currentNonTerminalId][i] = 1; }
                 }
             } else {
                 if (nextSymbol->IS_TERMINAL) {
@@ -277,16 +262,17 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
                         if (terminalId >= 0 && terminalId < NUM_TERMINALS) {
                             followVector[currentNonTerminalId][terminalId] = 1;
                         } else {
-                            fprintf(stderr, "Error: Invalid terminal ID %d in rule %d\n",
-                                    terminalId, ruleIndex);
+                            fprintf(stderr, "Error: Invalid terminal ID %d in rule %d\n", terminalId, ruleIndex);
                         }
                     }
                 } else {
                     int nextNonTerminalId = nextSymbol->TYPE.NON_TERMINAL;
 
                     if (nextNonTerminalId < 0 || nextNonTerminalId >= NUM_NONTERMINALS) {
-                        fprintf(stderr, "Error: Invalid next non-terminal ID %d in rule %d\n",
-                                nextNonTerminalId, ruleIndex);
+                        fprintf(stderr,
+                                "Error: Invalid next non-terminal ID %d in rule %d\n",
+                                nextNonTerminalId,
+                                ruleIndex);
                         currentSymbol = currentSymbol->next;
                         continue;
                     }
@@ -299,9 +285,7 @@ void populateFollow(int** followVector, int** firstVector, struct Grammar* parse
 
                     if (firstVector[nextNonTerminalId][TK_EPS] == 1) {
                         for (int i = 0; i < NUM_TERMINALS; i++) {
-                            if (followVector[lhsNonTerminalId][i] == 1) {
-                                followVector[currentNonTerminalId][i] = 1;
-                            }
+                            if (followVector[lhsNonTerminalId][i] == 1) { followVector[currentNonTerminalId][i] = 1; }
                         }
                     }
                 }
@@ -334,9 +318,7 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
         if (prevFollowVector[i] == NULL) {
             fprintf(stderr, "Error: Memory allocation failed for previous FOLLOW set row %d\n", i);
 
-            for (int j = 0; j < i; j++) {
-                free(prevFollowVector[j]);
-            }
+            for (int j = 0; j < i; j++) { free(prevFollowVector[j]); }
             free(prevFollowVector);
             return;
         }
@@ -345,13 +327,13 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
     /* DEBUG ONLY: Initial setup for follow set */
     printf("[DEBUG] Adding $ to FOLLOW(program)\n");
     if (program >= 0 && program < NUM_NONTERMINALS && TK_DOLLAR >= 0 && TK_DOLLAR < NUM_TERMINALS) {
-        followVector[program][TK_DOLLAR] = 1;
+        followVector[program][TK_DOLLAR]     = 1;
         prevFollowVector[program][TK_DOLLAR] = 1;
     } else {
         fprintf(stderr, "Error: Invalid program ID %d or TK_DOLLAR ID %d\n", program, TK_DOLLAR);
     }
 
-    int iteration = 0;
+    int       iteration      = 0;
     const int MAX_ITERATIONS = 100;
 
     while (iteration < MAX_ITERATIONS) {
@@ -377,9 +359,7 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
         }
 
         for (int i = 0; i < NUM_NONTERMINALS; i++) {
-            for (int j = 0; j < NUM_TERMINALS; j++) {
-                prevFollowVector[i][j] = followVector[i][j];
-            }
+            for (int j = 0; j < NUM_TERMINALS; j++) { prevFollowVector[i][j] = followVector[i][j]; }
         }
 
         iteration++;
@@ -389,9 +369,7 @@ void populateFollowTillStable(int** followVector, int** firstVector, struct Gram
         fprintf(stderr, "Warning: FOLLOW sets did not stabilize after %d iterations\n", MAX_ITERATIONS);
     }
 
-    for (int i = 0; i < NUM_NONTERMINALS; i++) {
-        free(prevFollowVector[i]);
-    }
+    for (int i = 0; i < NUM_NONTERMINALS; i++) { free(prevFollowVector[i]); }
     free(prevFollowVector);
 
     /* DEBUG ONLY: Completion message */
@@ -424,49 +402,41 @@ void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets) {
 
         /* Print non-terminal name */
         printf("| %-15s | ", getNonTerminal(i));
-        
+
         /* Print FIRST set with better formatting */
-        bool first = true;
+        bool first        = true;
         bool isEmptyFirst = true;
         printf("{");
         for (int j = 0; j < NUM_TERMINALS; j++) {
             if (firstAndFollowSets->FIRST[i][j] == 1) {
-                if (!first) {
-                    printf(", ");
-                }
+                if (!first) { printf(", "); }
                 if (j == TK_EPS) {
                     printf("ε");
                 } else {
                     printf("%s", getTerminal(j));
                 }
-                first = false;
+                first        = false;
                 isEmptyFirst = false;
             }
         }
-        if (isEmptyFirst) {
-            printf("∅");
-        }
-        
+        if (isEmptyFirst) { printf("∅"); }
+
         /* Add padding for consistent column width */
         printf("%-*s | ", isEmptyFirst ? 24 : 25 - (int)printf("}"), "");
 
         /* Print FOLLOW set with better formatting */
-        first = true;
+        first              = true;
         bool isEmptyFollow = true;
         printf("{");
         for (int j = 0; j < NUM_TERMINALS; j++) {
             if (firstAndFollowSets->FOLLOW[i][j] == 1) {
-                if (!first) {
-                    printf(", ");
-                }
+                if (!first) { printf(", "); }
                 printf("%s", getTerminal(j));
-                first = false;
+                first         = false;
                 isEmptyFollow = false;
             }
         }
-        if (isEmptyFollow) {
-            printf("∅");
-        }
+        if (isEmptyFollow) { printf("∅"); }
         printf("} |\n");
     }
     printf("+-------------------------------------------------------------------------+\n");
@@ -519,9 +489,7 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
         if (firstAndFollowSets->FIRST[i] == NULL) {
             fprintf(stderr, "Error: Memory allocation failed for FIRST set row %d\n", i);
 
-            for (int j = 0; j < i; j++) {
-                free(firstAndFollowSets->FIRST[j]);
-            }
+            for (int j = 0; j < i; j++) { free(firstAndFollowSets->FIRST[j]); }
             free(firstAndFollowSets->FIRST);
             free(firstAndFollowSets->FOLLOW);
             free(firstAndFollowSets);
@@ -546,9 +514,7 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
 
     /* DEBUG ONLY: Initializing flags */
     printf("[DEBUG] Initializing processing flags\n");
-    for (int i = 0; i < NUM_NONTERMINALS; i++) {
-        nonTerminalProcessed[i] = false;
-    }
+    for (int i = 0; i < NUM_NONTERMINALS; i++) { nonTerminalProcessed[i] = false; }
 
     /* DEBUG ONLY: Computing FIRST sets */
     printf("[DEBUG] Computing FIRST sets\n");
@@ -556,8 +522,7 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
         if (!nonTerminalProcessed[i]) {
             printf("[DEBUG] Computing FIRST for non-terminal %d: %s\n", i, getNonTerminal(i));
             if (nonTerminalRuleRecords[i] == NULL) {
-                fprintf(stderr, "Error: No rule records for non-terminal %d: %s\n",
-                        i, getNonTerminal(i));
+                fprintf(stderr, "Error: No rule records for non-terminal %d: %s\n", i, getNonTerminal(i));
                 continue;
             }
             computeFirstSets(firstAndFollowSets->FIRST, i);

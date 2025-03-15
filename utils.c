@@ -1,18 +1,18 @@
-#include <stdint.h>
-#include <stdbool.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
-#include <unistd.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include "constants.h"
 
 int computeHash(const char* str) {
     uint32_t hash = 5381; // Start with a prime number
-    int c;
+    int      c;
 
     while ((c = *str++)) {
         hash = ((hash << 5) + hash) + c; // hash * 33 + c
@@ -30,16 +30,12 @@ bool isCharacterEqualTo(const char character, const char targetCharacter) {
 }
 
 char* duplicateSubstring(const char* sourceStart, const char* sourceEnd) {
-    if (sourceStart == NULL || sourceEnd == NULL || sourceEnd < sourceStart) {
-        return NULL;
-    }
+    if (sourceStart == NULL || sourceEnd == NULL || sourceEnd < sourceStart) { return NULL; }
 
-    size_t substringLength = sourceEnd - sourceStart;
-    char* destinationBuffer = (char*)malloc((substringLength + 1) * sizeof(char));
+    size_t substringLength   = sourceEnd - sourceStart;
+    char*  destinationBuffer = (char*)malloc((substringLength + 1) * sizeof(char));
 
-    if (destinationBuffer == NULL) {
-        return NULL;
-    }
+    if (destinationBuffer == NULL) { return NULL; }
 
     memcpy(destinationBuffer, sourceStart, substringLength);
     destinationBuffer[substringLength] = '\0';
