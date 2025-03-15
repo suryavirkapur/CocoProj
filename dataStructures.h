@@ -99,8 +99,8 @@ struct Grammar {
 };
 
 struct FirstAndFollow {
-  int** FIRST;
-  int** FOLLOW;
+  int** firstSet;
+  int** followSet;
 };
 
 struct ParsingTable {

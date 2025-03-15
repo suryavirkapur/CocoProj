@@ -75,12 +75,12 @@ void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingT
       } else {
         // non-terminal in RHS
         for (int j = 0; j < NUM_TERMINALS; j++) {
-          if (firstAndFollowSets->FIRST[trav->symType.NON_TERMINAL][j] == 1) {
+          if (firstAndFollowSets->firstSet[trav->symType.NON_TERMINAL][j] == 1) {
             parseTable->entries[lhsNonTerminal][j] = rule->ruleNum;
           }
         }
         // check epsilon derivation
-        if (firstAndFollowSets->FIRST[trav->symType.NON_TERMINAL][TK_EPS] == 0) {
+        if (firstAndFollowSets->firstSet[trav->symType.NON_TERMINAL][TK_EPS] == 0) {
           epsilonGenerated = 0;
           break;
         }
@@ -91,7 +91,7 @@ void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingT
     // handle follow set for epsilon rules
     if (epsilonGenerated) {
       for (int j = 0; j < NUM_TERMINALS; j++) {
-        if (firstAndFollowSets->FOLLOW[lhsNonTerminal][j] == 1) {
+        if (firstAndFollowSets->followSet[lhsNonTerminal][j] == 1) {
           parseTable->entries[lhsNonTerminal][j] = rule->ruleNum;
         }
       }
@@ -132,7 +132,7 @@ int isInFollow(struct FirstAndFollow* firstAndFollowSets, int nonTerminal, int t
       token >= NUM_TERMINALS) {
     return 0;
   }
-  return firstAndFollowSets->FOLLOW[nonTerminal][token] == 1;
+  return firstAndFollowSets->followSet[nonTerminal][token] == 1;
 }
 
 struct ParseTree*
@@ -298,7 +298,7 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
 
         // error recovery
         if (isInFollow(firstAndFollowSets, nonTerminalID, tokenID)) {
-          // token in FOLLOW set - create empty derivation
+          // token in followSet set - create empty derivation
           struct Symbol* epsilonSymbol = (struct Symbol*)malloc(sizeof(struct Symbol));
           if (epsilonSymbol != NULL) {
             epsilonSymbol->isTerminal       = 1;

@@ -12,13 +12,8 @@ Group No. 46
 #include "dataStructures.h"
 #include "grammar.h"
 
-struct FirstAndFollow* createFirstAndFollowSets();
 void                   computeFirstSets(int mapIndex, int** firstVector);
-void                   fillFirst(int** firstVector, struct Grammar* parsedGrammar);
-void                   populateFollow(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
-void                   fillFollowF(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
 struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar);
 void                   verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets);
-void                   initialiseCheckIfDone();
 
 #endif
