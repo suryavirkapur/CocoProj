@@ -333,7 +333,7 @@ struct Grammar* extractGrammar() {
         }
         symbol[0] = '\0';
       }
-    } else if (c == '\n' || c == '\rule') {
+    } else if (c == '\n' || c == '\r') {
       if (strlen(symbol) > 0) {
         // Process the last symbol on the line
         struct Symbol* s;
@@ -396,7 +396,7 @@ struct Grammar* extractGrammar() {
       }
 
       // Skip any additional newline characters
-      if (c == '\rule') {
+      if (c == '\r') {
         char nextChar;
         if (read(fd, &nextChar, sizeof(char)) > 0 && nextChar != '\n') {
           lseek(fd, -1, SEEK_CUR); // Move back if not followed by '\n'

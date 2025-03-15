@@ -27,10 +27,10 @@ int   inputBytesRead        = 0;
 int   fileDescriptor;
 char* lexemeStart        = NULL;
 char* forward            = NULL;
-int   lexerState         = 0;
+int   lexerState         = 7;  
 int   lineCount          = 1;
 int   lookaheadCharacter = 0;
-int   backtrackingState  = 0;
+int   backtrackingState  = 7;  
 bool  lexDebug           = false;
 
 struct Node {
@@ -93,40 +93,24 @@ struct KeywordTable* createKeywordTable() {
   struct {
     TokenName   token;
     const char* keyword;
-  } keywordData[] = {{TK_WITH, "with"},
-                     {TK_PARAMETERS, "parameters"},
-                     {TK_END, "end"},
-                     {TK_WHILE, "while"},
-                     {TK_TYPE, "type"},
-                     {TK_MAIN, "_main"},
-                     {TK_GLOBAL, "global"},
-                     {TK_PARAMETER, "parameter"},
-                     {TK_LIST, "list"},
-                     {TK_INPUT, "input"},
-                     {TK_OUTPUT, "output"},
-                     {TK_INT, "int"},
-                     {TK_REAL, "real"},
-                     {TK_ENDWHILE, "endwhile"},
-                     {TK_IF, "if"},
-                     {TK_THEN, "then"},
-                     {TK_ENDIF, "endif"},
-                     {TK_READ, "read"},
-                     {TK_WRITE, "write"},
-                     {TK_RETURN, "return"},
-                     {TK_CALL, "call"},
-                     {TK_RECORD, "record"},
-                     {TK_ENDRECORD, "endrecord"},
-                     {TK_ELSE, "else"},
-                     {TK_DEFINETYPE, "definetype"},
-                     {TK_AS, "as"},
-                     {TK_UNION, "union"},
-                     {TK_ENDUNION, "endunion"}};
+  } keywordData[] = {
+    {TK_WITH, "with"}, {TK_PARAMETERS, "parameters"}, {TK_END, "end"},
+    {TK_WHILE, "while"}, {TK_TYPE, "type"}, {TK_MAIN, "_main"},
+    {TK_GLOBAL, "global"}, {TK_PARAMETER, "parameter"}, {TK_LIST, "list"},
+    {TK_INPUT, "input"}, {TK_OUTPUT, "output"}, {TK_INT, "int"},
+    {TK_REAL, "real"}, {TK_ENDWHILE, "endwhile"}, {TK_IF, "if"},
+    {TK_THEN, "then"}, {TK_ENDIF, "endif"}, {TK_READ, "read"},
+    {TK_WRITE, "write"}, {TK_RETURN, "return"}, {TK_CALL, "call"},
+    {TK_RECORD, "record"}, {TK_ENDRECORD, "endrecord"}, {TK_ELSE, "else"},
+    {TK_DEFINETYPE, "definetype"}, {TK_AS, "as"}, {TK_UNION, "union"},
+    {TK_ENDUNION, "endunion"}
+  };
 
   int numKeywords = sizeof(keywordData) / sizeof(keywordData[0]);
   for (int i = 0; i < numKeywords; i++) {
     insertKeyword(hashTable,
                   keywordData[i].token,
-                  (char*)keywordData[i].keyword); // Cast to char* is safe here, since insertKeyword does not modify it.
+                  (char*)keywordData[i].keyword);
   }
 
   return hashTable;
@@ -142,7 +126,7 @@ void setupBuffers(int f) {
   lookaheadCharacter    = 0;
   buffPair[0]           = (char*)malloc(BUFFER_SIZE * sizeof(char));
   buffPair[1]           = (char*)malloc(BUFFER_SIZE * sizeof(char));
-  lexerState            = 0;
+  lexerState            = 7;   
   currentBufferIsSecond = 1;
   bufferIndex           = 0;
 }
@@ -151,7 +135,7 @@ void setupLexer(int f) {
   if (lexDebug) printf("Setting up lexer\n");
   setupBuffers(f);
   kt                = createKeywordTable();
-  backtrackingState = 0;
+  backtrackingState = 7;   
 }
 
 int getInputStream() {
@@ -235,12 +219,12 @@ Token* fillToken(Token* t, TokenName tokenName, char* lexeme, int lineNumber, in
 Token* getToken() {
   if (lexDebug) printf("Getting token\n");
 
-  // track dfa state
-  lexerState = 0;
+  /* track dfa state */
+  lexerState = 7; 
   char c     = 1;
   int  errorType;
 
-  // make a new token
+  /* make a new token */
   Token* t = (Token*)malloc(sizeof(Token));
 
   while (1) {
@@ -248,324 +232,303 @@ Token* getToken() {
     if (c == EOF) return NULL;
 
     switch (lexerState) {
-    case 0: {
+
+    case 7: {  
       c = nextChar();
       if (isCharacterEqualTo(c, '<')) {
-        lexerState        = 16;
-        backtrackingState = 16;
+        lexerState        = 55;         
+        backtrackingState = 55;
       } else if (isCharacterEqualTo(c, '#')) {
-        lexerState        = 52;
-        backtrackingState = 52;
+        lexerState        = 45;         
+        backtrackingState = 45;
       } else if (isCharacterInRange(c, 'b', 'd')) {
-        lexerState        = 35;
-        backtrackingState = 35;
+        lexerState        = 53;         
+        backtrackingState = 53;
       } else if (isCharacterEqualTo(c, 'a') || isCharacterInRange(c, 'e', 'z')) {
-        lexerState        = 40;
-        backtrackingState = 40;
-      } else if (isCharacterEqualTo(c, '_')) {
-        lexerState        = 47;
-        backtrackingState = 47;
-      } else if (isCharacterEqualTo(c, '[')) {
-        lexerState        = 7;
-        backtrackingState = 7;
-      } else if (isCharacterEqualTo(c, ']')) {
-        lexerState        = 8;
-        backtrackingState = 8;
-      } else if (isCharacterEqualTo(c, ',')) {
-        lexerState        = 9;
+        lexerState        = 9;          
         backtrackingState = 9;
-      } else if (isCharacterEqualTo(c, ';')) {
-        lexerState        = 12;
-        backtrackingState = 12;
-      } else if (isCharacterEqualTo(c, ':')) {
-        lexerState        = 11;
-        backtrackingState = 11;
-      } else if (isCharacterEqualTo(c, '.')) {
-        lexerState        = 10;
-        backtrackingState = 10;
-      } else if (isCharacterEqualTo(c, '(')) {
-        lexerState        = 5;
-        backtrackingState = 5;
-      } else if (isCharacterEqualTo(c, ')')) {
-        lexerState        = 6;
-        backtrackingState = 6;
-      } else if (isCharacterEqualTo(c, '+')) {
-        lexerState        = 1;
-        backtrackingState = 1;
-      } else if (isCharacterEqualTo(c, '-')) {
-        lexerState        = 2;
-        backtrackingState = 2;
-      } else if (isCharacterEqualTo(c, '*')) {
-        lexerState        = 3;
-        backtrackingState = 3;
-      } else if (isCharacterEqualTo(c, '/')) {
-        lexerState        = 4;
-        backtrackingState = 4;
-      } else if (isCharacterEqualTo(c, '~')) {
-        lexerState        = 13;
-        backtrackingState = 13;
-      } else if (isCharacterEqualTo(c, '!')) {
-        lexerState        = 14;
-        backtrackingState = 14;
-      } else if (isCharacterEqualTo(c, '>')) {
-        lexerState        = 22;
-        backtrackingState = 22;
-      } else if (isCharacterEqualTo(c, '=')) {
-        lexerState        = 25;
-        backtrackingState = 25;
-      } else if (isCharacterEqualTo(c, '@')) {
-        lexerState        = 27;
-        backtrackingState = 27;
-      } else if (isCharacterEqualTo(c, '&')) {
-        lexerState        = 30;
+      } else if (isCharacterEqualTo(c, '_')) {
+        lexerState        = 30;         
         backtrackingState = 30;
+      } else if (isCharacterEqualTo(c, '[')) {
+        lexerState        = 28;         
+        backtrackingState = 28;
+      } else if (isCharacterEqualTo(c, ']')) {
+        lexerState        = 31;         
+        backtrackingState = 31;
+      } else if (isCharacterEqualTo(c, ',')) {
+        lexerState        = 34;         
+        backtrackingState = 34;
+      } else if (isCharacterEqualTo(c, ';')) {
+        lexerState        = 43;         
+        backtrackingState = 43;
+      } else if (isCharacterEqualTo(c, ':')) {
+        lexerState        = 40;         
+        backtrackingState = 40;
+      } else if (isCharacterEqualTo(c, '.')) {
+        lexerState        = 37;         
+        backtrackingState = 37;
+      } else if (isCharacterEqualTo(c, '(')) {
+        lexerState        = 22;         
+        backtrackingState = 22;
+      } else if (isCharacterEqualTo(c, ')')) {
+        lexerState        = 25;         
+        backtrackingState = 25;
+      } else if (isCharacterEqualTo(c, '+')) {
+        lexerState        = 10;         
+        backtrackingState = 10;
+      } else if (isCharacterEqualTo(c, '-')) {
+        lexerState        = 13;         
+        backtrackingState = 13;
+      } else if (isCharacterEqualTo(c, '*')) {
+        lexerState        = 16;         
+        backtrackingState = 16;
+      } else if (isCharacterEqualTo(c, '/')) {
+        lexerState        = 19;         
+        backtrackingState = 19;
+      } else if (isCharacterEqualTo(c, '~')) {
+        lexerState        = 46;         
+        backtrackingState = 46;
+      } else if (isCharacterEqualTo(c, '!')) {
+        lexerState        = 49;         
+        backtrackingState = 49;
+      } else if (isCharacterEqualTo(c, '>')) {
+        lexerState        = 14;         
+        backtrackingState = 14;
+      } else if (isCharacterEqualTo(c, '=')) {
+        lexerState        = 23;         
+        backtrackingState = 23;
+      } else if (isCharacterEqualTo(c, '@')) {
+        lexerState        = 29;         
+        backtrackingState = 29;
+      } else if (isCharacterEqualTo(c, '&')) {
+        lexerState        = 38;         
+        backtrackingState = 38;
       } else if (isCharacterEqualTo(c, '%')) {
-        lexerState        = 33;
-        backtrackingState = 33;
+        lexerState        = 47;         
+        backtrackingState = 47;
       } else if (isCharacterInRange(c, '0', '9')) {
-        lexerState        = 42;
-        backtrackingState = 42;
-      } else if (isCharacterEqualTo(c, ' ') || isCharacterEqualTo(c, '\f') || isCharacterEqualTo(c, '\rule') ||
-                 isCharacterEqualTo(c, '\t') || isCharacterEqualTo(c, '\v')) {
+        lexerState        = 15;         
+        backtrackingState = 15;
+      } else if (isCharacterEqualTo(c, ' ') || isCharacterEqualTo(c, '\f') ||
+                 isCharacterEqualTo(c, '\r') || isCharacterEqualTo(c, '\t') ||
+                 isCharacterEqualTo(c, '\v')) {
         lexemeStart++;
-        lexerState        = 0;
-        backtrackingState = 0;
+        lexerState        = 7;          
+        backtrackingState = 7;
       } else if (isCharacterEqualTo(c, '\n')) {
         lexemeStart++;
-        lexerState        = 0;
-        backtrackingState = 0;
+        lexerState        = 7;          
+        backtrackingState = 7;
       } else if (isCharacterEqualTo(c, EOF)) {
         return NULL;
       } else {
         printf("Line %d Error: Unknown Symbol <%c>\n", lineCount, c);
         errorType         = 6;
-        lexerState        = 55;
-        backtrackingState = 55;
+        lexerState        = 54;         
+        backtrackingState = 54;
       }
       break;
     }
-    case 1: {
+    case 10: {  
       if (lexDebug) printf("[DEBUG] Token is +\n and State is 1\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_PLUS, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 2: {
+    case 13: {  
       if (lexDebug) printf("[DEBUG] Token is -\n and State is 2\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_MINUS, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 3: {
+    case 16: {  
       if (lexDebug) printf("[DEBUG] Token is *\n and State is 3\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_MUL, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 4: {
+    case 19: {  
       if (lexDebug) printf("[DEBUG] Token is /\n and State is 4\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_DIV, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 5: {
+    case 22: {  
       if (lexDebug) printf("[DEBUG] Token is (\n and State is 5\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_OP, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 6: {
+    case 25: {  
       if (lexDebug) printf("[DEBUG] Token is )\n and State is 6\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_CL, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 7: {
+    case 28: {  
       if (lexDebug) printf("[DEBUG] Token is [\n and State is 7\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_SQL, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 8: {
+    case 31: {  
       if (lexDebug) printf("[DEBUG] Token is ]\n and State is 8\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_SQR, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 9: {
+    case 34: {  
       if (lexDebug) printf("[DEBUG] Token is ,\n and State is 9\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_COMMA, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 10: {
+    case 37: {  
       if (lexDebug) printf("[DEBUG] Token is .\n and State is 10\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_DOT, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 11: {
+    case 40: {  
       if (lexDebug) printf("[DEBUG] Token is :\n and State is 11\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_COLON, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 12: {
+    case 43: {  
       if (lexDebug) printf("[DEBUG] Token is ;\n and State is 12\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_SEM, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 13: {
+    case 46: {  
       if (lexDebug) printf("[DEBUG] Token is !\n and State is 13\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_NOT, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 14: {
-
+    case 49: {  
       c = nextChar();
       if (c == '=') {
         if (lexDebug) printf("[DEBUG] Token is != and State is 14\n");
-        lexerState = 15;
+        lexerState = 52;         
       } else {
         if (lexDebug) printf("[DEBUG] Token is != and State is 15\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 15: {
+    case 52: {  
       if (lexDebug) printf("[DEBUG] Token is <\n and State is 15\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_NE, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 16: {
+    case 55: {  
       if (lexDebug) printf("[DEBUG] Token is <= and State is 16\n");
       c = nextChar();
       if (c == '-') {
-        lexerState = 17;
+        lexerState = 58;         
       } else if (c == '=') {
-        lexerState = 20;
+        lexerState = 8;          
       } else {
-        lexerState = 21;
+        lexerState = 11;         
       }
       break;
     }
-    case 17: {
+    case 58: {  
       if (lexDebug) printf("[DEBUG] Token is >= and State is 17\n");
       c = nextChar();
       if (c == '-') {
-        lexerState = 18;
+        lexerState = 2;          
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 18: {
+    case 2: {  
       if (lexDebug) printf("[DEBUG] Token is - and State is 18\n");
       c = nextChar();
       if (c == '-') {
-        lexerState = 19;
+        lexerState = 5;          
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 19: {
+    case 5: {  
       if (lexDebug) printf("[DEBUG] Token is <=\n and State is 19\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_ASSIGNOP, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 20: {
+    case 8: {  
       if (lexDebug) printf("[DEBUG] Token is <=\n and State is 20\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_LE, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 21: {
+    case 11: {  
       if (lexDebug) printf("[DEBUG] Token is <= and State is 21\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
-
       if (c == '\n')
         fillToken(t, TK_LT, lex, lineCount - 1, 0, NULL);
       else
         fillToken(t, TK_LT, lex, lineCount, 0, NULL);
-
       accept();
       return t;
-      break;
     }
-    case 22: {
+    case 14: {  
       if (lexDebug) printf("[DEBUG] Token is >= and State is 22\n");
       c = nextChar();
       if (c == '=') {
-        lexerState = 23;
+        lexerState = 17;         
       } else {
-        lexerState = 24;
+        lexerState = 20;         
       }
       break;
     }
-    case 23: {
-
+    case 17: {  
       if (lexDebug) printf("[DEBUG] Token is >= and State is 23\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_GE, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 24: {
-
+    case 20: {  
       if (lexDebug) printf("[DEBUG] Token is >= and State is 24\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
@@ -575,121 +538,115 @@ Token* getToken() {
         fillToken(t, TK_GT, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 25: {
-
+    case 23: {  
       if (lexDebug) printf("[DEBUG] Token is >= and State is 24\n");
       c = nextChar();
       if (c == '=') {
-
         if (lexDebug) printf("[DEBUG] Token is >=, State 23, Going 26\n");
-        lexerState = 26;
+        lexerState = 26;         
       } else {
         if (lexDebug) printf("[DEBUG] Token is >=, State 23, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 26: {
+    case 26: {  
       if (lexDebug) printf("[DEBUG] Token is >=\n and State is 26\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_EQ, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 27: {
+    case 29: {  
       c = nextChar();
       if (c == '@') {
         if (lexDebug) printf("[DEBUG] Token is @, State 27\n");
-        lexerState = 28;
+        lexerState = 32;         
       } else {
         if (lexDebug) printf("[DEBUG] Token is @, State 27, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 28: {
+    case 32: {  
       c = nextChar();
       if (c == '@') {
         if (lexDebug) printf("[DEBUG] Token is @, State 28\n");
-        lexerState = 29;
+        lexerState = 35;         
       } else {
         if (lexDebug) printf("[DEBUG] Token is @, State 28, Going 55\n");
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 29: {
+    case 35: {  
       if (lexDebug) printf("[DEBUG] Token is @\n and State is 29\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_OR, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 30: {
+    case 38: {  
       if (lexDebug) printf("[DEBUG] Token is &, State 30\n");
       c = nextChar();
       if (c == '&') {
-        lexerState = 31;
+        lexerState = 41;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 31: {
+    case 41: {  
       if (lexDebug) printf("[DEBUG] Token is &, State 31\n");
       c = nextChar();
       if (c == '&') {
-        lexerState = 32;
+        lexerState = 44;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 32: {
+    case 44: {  
       if (lexDebug) printf("[DEBUG] Token is &\n and State is 32\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       fillToken(t, TK_AND, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 33: {
+    case 47: {  
       if (lexDebug) printf("[DEBUG]  \n and State is 33\n");
       c = nextChar();
       while (c != '\n' && c != EOF) { c = nextChar(); }
-      lexerState = 34;
+      lexerState = 50;         
       break;
     }
-    case 34: {
+    case 50: {  
       if (lexDebug) printf("[DEBUG]  \n and State is 34\n");
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (c == '\n')
@@ -698,58 +655,57 @@ Token* getToken() {
         fillToken(t, TK_COMMENT, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 35: {
+    case 53: {  
       if (lexDebug) printf("[DEBUG]  \n and State is 35\n");
       backtrackingState--;
       c = nextChar();
       if (isCharacterInRange(c, '2', '7')) {
-        lexerState = 36;
+        lexerState = 56;         
       } else if (isCharacterInRange(c, 'a', 'z')) {
-        lexerState = 40;
+        lexerState = 9;          
       } else {
-        lexerState = 41;
+        lexerState = 12;         
       }
       break;
     }
-    case 36: {
+    case 56: {  
       if (lexDebug) printf("[DEBUG]  , State 36, STARTING 37\n");
       c = nextChar();
       while (isCharacterInRange(c, 'b', 'd')) c = nextChar();
 
       if (isCharacterInRange(c, '2', '7'))
-        lexerState = 37;
-      else { lexerState = 39; }
+        lexerState = 0;          
+      else
+        lexerState = 6;          
       break;
     }
-    case 37: {
+    case 0: {  
       c = nextChar();
       while (isCharacterInRange(c, '2', '7')) c = nextChar();
 
       if (!isCharacterInRange(c, '2', '7') && !isCharacterInRange(c, 'b', 'd')) {
         if (lexDebug) printf("[DEBUG]  , State 37, Going 38\n");
-        lexerState = 38;
+        lexerState = 3;          
       } else {
         printf("Line %d Error: Two identifiers are not allowed back to back without a break\n", lineCount);
         errorType  = 5;
-        lexerState = 55;
+        lexerState = 54;         
       }
       break;
     }
-    case 38: {
+    case 3: {  
       if (lexDebug) printf("[DEBUG]  , State 38\n");
       retract(1);
       int identifierLength = forward - lexemeStart + 1;
       if (identifierLength < 2) {
         printf("Line %d Error: Identifier length is less than 2\n", lineCount);
         errorType  = 4;
-        lexerState = 55;
+        lexerState = 54;         
       } else if (identifierLength > 20) {
-        printf("Line %d \tError: Variable Identifier is longer than the prescribed length of 20 characters.\n",
-               lineCount);
+        printf("Line %d \tError: Variable Identifier is longer than the prescribed length of 20 characters.\n", lineCount);
         errorType  = 4;
-        lexerState = 55;
+        lexerState = 54;         
       } else {
         char* lex = duplicateSubstring(lexemeStart, forward);
         if (c == '\n')
@@ -761,7 +717,7 @@ Token* getToken() {
       }
       break;
     }
-    case 39: {
+    case 6: {  
       if (lexDebug) printf("[DEBUG]  , State 39\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
@@ -769,24 +725,21 @@ Token* getToken() {
         fillToken(t, TK_ID, lex, lineCount - 1, 0, NULL);
       else
         fillToken(t, TK_ID, lex, lineCount, 0, NULL);
-
       accept();
       return t;
-      break;
     }
-    case 40: {
+    case 9: {  
       if (lexDebug) printf("[DEBUG]  , State 40\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z')) c = nextChar();
-      lexerState = 41;
+      lexerState = 12;         
       break;
     }
-    case 41: {
-      // this broke something
+    case 12: {  
       if (lexDebug) printf("[DEBUG]  , State 41\n");
       retract(1);
-      char*        lex = duplicateSubstring(lexemeStart, forward);
-      struct Node* n   = findKeyword(kt, lex);
+      char* lex = duplicateSubstring(lexemeStart, forward);
+      struct Node* n = findKeyword(kt, lex);
       if (n == NULL) {
         fillToken(t, TK_FIELDID, lex, lineCount, 0, NULL);
       } else {
@@ -795,24 +748,23 @@ Token* getToken() {
       accept();
       return t;
     }
-    case 42: {
+    case 15: {  
       if (lexDebug) printf("[DEBUG]  , State 42\n");
       c = nextChar();
       while (isCharacterInRange(c, '0', '9')) c = nextChar();
-
       if (c == '.') {
         if (lexDebug) printf("[DEBUG]  , State 42, Going 44, Looking ., REAL NUMBER\n");
-        lexerState = 44;
+        lexerState = 21;         
       } else {
-        lexerState = 43;
+        lexerState = 18;         
       }
       break;
     }
-    case 43: {
+    case 18: {  
       if (lexDebug) printf("[DEBUG]  , State 43, Looking NUMBER\n");
       retract(1);
-      char* lex      = duplicateSubstring(lexemeStart, forward);
-      tVal* val      = malloc(sizeof(tVal));
+      char* lex = duplicateSubstring(lexemeStart, forward);
+      tVal* val = malloc(sizeof(tVal));
       val->INT_VALUE = str2int(lex);
       if (c == '\n')
         fillToken(t, TK_NUM, lex, lineCount - 1, 1, val);
@@ -820,48 +772,46 @@ Token* getToken() {
         fillToken(t, TK_NUM, lex, lineCount, 1, val);
       accept();
       return t;
-      break;
     }
-    case 44: {
+    case 21: {  
       if (lexDebug) printf("[DEBUG]  , State 44\n");
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
-        lexerState = 45;
+        lexerState = 24;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 45: {
+    case 24: {  
       if (lexDebug) printf("[DEBUG]  , State 45\n");
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
-        lexerState = 46;
+        lexerState = 27;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 46: {
+    case 27: {  
       c = nextChar();
       if (c == 'E') {
         if (lexDebug) printf("[DEBUG]  , State 46, Going 56, Real NumPath\n");
-        // handle scientific notation
-        lexerState = 56;
+        lexerState = 57;         
       } else {
         retract(1);
-        char* lex        = duplicateSubstring(lexemeStart, forward);
-        tVal* val        = (tVal*)malloc(sizeof(tVal));
+        char* lex = duplicateSubstring(lexemeStart, forward);
+        tVal* val = (tVal*)malloc(sizeof(tVal));
         val->FLOAT_VALUE = str2flt(lex);
         fillToken(t, TK_RNUM, lex, lineCount, 2, val);
         accept();
@@ -869,47 +819,46 @@ Token* getToken() {
       }
       break;
     }
-    case 47: {
+    case 30: {  
       if (lexDebug) printf("[DEBUG]  , State 47\n");
       c = nextChar();
       if (isCharacterInRange(c, 'a', 'z') || isCharacterInRange(c, 'A', 'Z')) {
-        lexerState = 48;
+        lexerState = 33;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 48: {
+    case 33: {  
       if (lexDebug) printf("[DEBUG]  , State 48\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z') || isCharacterInRange(c, 'A', 'Z')) c = nextChar();
-
       if (isCharacterInRange(c, '0', '9')) {
-        lexerState = 49;
+        lexerState = 36;         
       } else {
-        lexerState = 51;
+        lexerState = 42;         
       }
       break;
     }
-    case 49: {
+    case 36: {  
       if (lexDebug) printf("[DEBUG]  , State 49\n");
       c = nextChar();
       while (isCharacterInRange(c, '0', '9')) c = nextChar();
-      lexerState = 50;
+      lexerState = 39;           
       break;
     }
-    case 50: {
+    case 39: {  
       retract(1);
       int identifierLength = forward - lexemeStart + 1;
       if (identifierLength > 30) {
         printf("Line %d Error: Function identifier length exceeds 30 characters\n", lineCount);
         errorType  = 4;
-        lexerState = 55;
+        lexerState = 54;         
       } else {
         char* lex = duplicateSubstring(lexemeStart, forward);
         if (c == '\n')
@@ -921,11 +870,11 @@ Token* getToken() {
       }
       break;
     }
-    case 51: {
+    case 42: {  
       if (lexDebug) printf("[DEBUG]  , State 51\n");
       retract(1);
-      char*        lex = duplicateSubstring(lexemeStart, forward);
-      struct Node* n   = findKeyword(kt, lex);
+      char* lex = duplicateSubstring(lexemeStart, forward);
+      struct Node* n = findKeyword(kt, lex);
       if (n == NULL) {
         if (c == '\n')
           fillToken(t, TK_FUNID, lex, lineCount - 1, 0, NULL);
@@ -939,32 +888,30 @@ Token* getToken() {
       }
       accept();
       return t;
-      break;
     }
-    case 52: {
+    case 45: {  
       if (lexDebug) printf("[DEBUG]  , State 52\n");
       c = nextChar();
       if (isCharacterInRange(c, 'a', 'z')) {
-        lexerState = 53;
+        lexerState = 48;         
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
     }
-    case 53: {
+    case 48: {  
       if (lexDebug) printf("[DEBUG]  , State 53\n");
       c = nextChar();
       while (isCharacterInRange(c, 'a', 'z')) c = nextChar();
-
-      lexerState = 54;
+      lexerState = 51;           
       break;
     }
-    case 54: {
+    case 51: {  
       if (lexDebug) printf("[DEBUG]  , State 54\n");
       retract(1);
       char* lex = duplicateSubstring(lexemeStart, forward);
@@ -974,9 +921,8 @@ Token* getToken() {
         fillToken(t, TK_RUID, lex, lineCount, 0, NULL);
       accept();
       return t;
-      break;
     }
-    case 55: {
+    case 54: {  
       char* lex = duplicateSubstring(lexemeStart, forward);
       if (errorType == 11 && c == '\n')
         fillToken(t, TK_ERR, lex, lineCount - 1, errorType, NULL);
@@ -984,54 +930,49 @@ Token* getToken() {
         fillToken(t, TK_ERR, lex, lineCount, errorType, NULL);
       accept();
       return t;
-      break;
     }
-    case 56: {
+    case 57: {  
       if (lexDebug) printf("[DEBUG]  , State 56\n");
       c = nextChar();
       if (c == '+' || c == '-' || isCharacterInRange(c, '0', '9')) {
         if (c == '+' || c == '-') {
-          lexerState = 57; // Read sign, now need digits
+          lexerState = 1;         
         } else {
-          // First digit of exponent
           retract(1);
-          lexerState = 57;
+          lexerState = 1;         // again 1
         }
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;          
         retract(1);
       }
       break;
     }
-    case 57: {
+    case 1: {  
       if (lexDebug) printf("[DEBUG]  , State 57\n");
-      // Read first exponent digit
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
-        lexerState = 58; // Read first digit, now need second digit
+        lexerState = 4;           
       } else {
         char* pattern = duplicateSubstring(lexemeStart, forward - sizeof(char));
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;          
         retract(1);
       }
       break;
     }
-
-    case 58: {
+    case 4: {  
       if (lexDebug) printf("[DEBUG]  , State 58\n");
-      // Read second exponent digit
+      c = nextChar();
       c = nextChar();
       if (isCharacterInRange(c, '0', '9')) {
-        // Successfully parsed scientific notation
-        char* lex        = duplicateSubstring(lexemeStart, forward);
-        tVal* val        = (tVal*)malloc(sizeof(tVal));
+        char* lex = duplicateSubstring(lexemeStart, forward);
+        tVal* val = (tVal*)malloc(sizeof(tVal));
         val->FLOAT_VALUE = str2flt(lex);
         fillToken(t, TK_RNUM, lex, lineCount, 2, val);
         accept();
@@ -1041,7 +982,7 @@ Token* getToken() {
         printf("Line %d Error: Unknown pattern <%s>\n", lineCount, pattern);
         free(pattern);
         errorType  = 11;
-        lexerState = 55;
+        lexerState = 54;         
         retract(1);
       }
       break;
@@ -1058,7 +999,7 @@ void removeComments(char* testCaseFile, char* cleanFile) {
   while ((c = nextChar()) != EOF) {
     switch (check) {
     case 0: {
-      if (c == ' ' || c == '\f' || c == '\rule' || c == '\t' || c == '\v') {
+      if (c == ' ' || c == '\f' || c == '\r' || c == '\t' || c == '\v') {
         write(1, &c, 1);
         check = 0;
       } else if (c == '%') {
