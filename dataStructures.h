@@ -72,8 +72,8 @@ union SymbolType {
 };
 
 struct Symbol {
-  union SymbolType TYPE;
-  int              IS_TERMINAL;
+  union SymbolType symType;
+  int              isTerminal;
   struct Symbol*   next;
 };
 
@@ -89,8 +89,8 @@ struct NonTerminalRuleRecords {
 };
 
 struct Rule {
-  struct SymbolList* SYMBOLS;
-  int                RULE_NO;
+  struct SymbolList* symbols;
+  int                ruleNum;
 };
 
 struct Grammar {
@@ -110,14 +110,14 @@ struct ParsingTable {
 struct NaryTreeNode;
 
 struct NonLeafNode {
-  int                  ENUM_ID;
-  int                  NUMBER_CHILDREN;
-  int                  RULE_NO;
+  int                  enumID;
+  int                  numChildren;
+  int                  ruleNum;
   struct NaryTreeNode* child;
 };
 
 struct LeafNode {
-  int    ENUM_ID;
+  int    enumID;
   Token* TOKEN;
 };
 
@@ -127,8 +127,8 @@ union NodeType {
 };
 
 struct NaryTreeNode {
-  union NodeType       NODE_TYPE;
-  int                  IS_LEAF_NODE;
+  union NodeType       nodeType;
+  int                  isLeaf;
   struct NaryTreeNode* parent;
   struct NaryTreeNode* next;
 };
@@ -138,19 +138,19 @@ struct ParseTree {
 };
 
 struct StackNode {
-  struct NaryTreeNode* TREE_NODE;
+  struct NaryTreeNode* treeNode;
   struct StackNode*    next;
 };
 
 struct Stack {
   struct StackNode* HEAD;
-  int               NUM_NODES;
+  int               numNodes;
 };
 
 // symbol ops
 struct Symbol*     initializeSymbol(char* symbol);
 struct SymbolList* initializeSymbolList();
-void               addToSymbolList(struct SymbolList* ls, struct Symbol* s);
+void               addToSymbolList(struct SymbolList* symList, struct Symbol* s);
 char*              appendToSymbol(char* str, char c);
 char*              copyLexeme(char* str);
 
@@ -159,18 +159,14 @@ struct ParseTree*    initializeParseTree();
 struct NaryTreeNode* createLeafNode(int enumId);
 struct NaryTreeNode* createNonLeafNode(int enumId);
 struct NaryTreeNode* createNode(int isTerminal, union SymbolType type, struct NaryTreeNode* parent);
-void                 addRuleToParseTree(struct NaryTreeNode* ntn, struct Rule* r);
-void                 printTree(struct ParseTree* pt);
-void                 printNaryTree(struct NaryTreeNode* nt);
-int                  getParseTreeNodeCount();
-int                  getParseTreeMemory();
+void                 addRuleToParseTree(struct NaryTreeNode* ntn, struct Rule* rule);
 
 // stack ops
 struct StackNode*    createStackNode(struct NaryTreeNode* ntn);
 void                 push(struct Stack* st, struct NaryTreeNode* ntn);
 struct NaryTreeNode* top(struct Stack* st);
 void                 pop(struct Stack* st);
-struct Stack*        initializeStack(struct ParseTree* pt);
+struct Stack*        initializeStack(struct ParseTree* parseTable);
 void                 pushTreeChildren(struct Stack* st, struct NaryTreeNode* ntn);
 
 #endif

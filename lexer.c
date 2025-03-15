@@ -325,7 +325,7 @@ Token* getToken() {
       } else if (isCharacterInRange(c, '0', '9')) {
         lexerState        = 42;
         backtrackingState = 42;
-      } else if (isCharacterEqualTo(c, ' ') || isCharacterEqualTo(c, '\f') || isCharacterEqualTo(c, '\r') ||
+      } else if (isCharacterEqualTo(c, ' ') || isCharacterEqualTo(c, '\f') || isCharacterEqualTo(c, '\rule') ||
                  isCharacterEqualTo(c, '\t') || isCharacterEqualTo(c, '\v')) {
         lexemeStart++;
         lexerState        = 0;
@@ -1058,7 +1058,7 @@ void removeComments(char* testCaseFile, char* cleanFile) {
   while ((c = nextChar()) != EOF) {
     switch (check) {
     case 0: {
-      if (c == ' ' || c == '\f' || c == '\r' || c == '\t' || c == '\v') {
+      if (c == ' ' || c == '\f' || c == '\rule' || c == '\t' || c == '\v') {
         write(1, &c, 1);
         check = 0;
       } else if (c == '%') {

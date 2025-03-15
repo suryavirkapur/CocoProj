@@ -16,61 +16,61 @@ Group No. 46
 #include <string.h>
 #include <unistd.h>
 
-struct ParsingTable* initializeParsingTable() {
-  struct ParsingTable* pt = (struct ParsingTable*)malloc(sizeof(struct ParsingTable));
-  if (pt == NULL) {
+struct ParsingTable* createParsingTable() {
+  struct ParsingTable* parseTable = (struct ParsingTable*)malloc(sizeof(struct ParsingTable));
+  if (parseTable == NULL) {
     fprintf(stderr, "Error: Memory allocation failed for parsing table\n");
     return NULL;
   }
 
-  pt->entries = (int**)malloc(NUM_NONTERMINALS * sizeof(int*));
-  if (pt->entries == NULL) {
+  parseTable->entries = (int**)malloc(NUM_NONTERMINALS * sizeof(int*));
+  if (parseTable->entries == NULL) {
     fprintf(stderr, "Error: Memory allocation failed for parsing table entries\n");
-    free(pt);
+    free(parseTable);
     return NULL;
   }
 
   for (int i = 0; i < NUM_NONTERMINALS; i++) {
-    pt->entries[i] = (int*)calloc(NUM_TERMINALS, sizeof(int));
-    if (pt->entries[i] == NULL) {
+    parseTable->entries[i] = (int*)calloc(NUM_TERMINALS, sizeof(int));
+    if (parseTable->entries[i] == NULL) {
       fprintf(stderr, "Error: Memory allocation failed for parsing table row %d\n", i);
       // Free previously allocated memory
-      for (int j = 0; j < i; j++) { free(pt->entries[j]); }
-      free(pt->entries);
-      free(pt);
+      for (int j = 0; j < i; j++) { free(parseTable->entries[j]); }
+      free(parseTable->entries);
+      free(parseTable);
       return NULL;
     }
   }
 
-  return pt;
+  return parseTable;
 }
 
-void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* pt) {
-  if (firstAndFollowSets == NULL || pt == NULL || parsedGrammar == NULL) {
+void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable) {
+  if (firstAndFollowSets == NULL || parseTable == NULL || parsedGrammar == NULL) {
     fprintf(stderr, "Error: NULL parameter in createParseTable\n");
     return;
   }
 
   // Iterate through all grammar rules
   for (int i = 1; i <= NUM_GRAMMAR_RULES; i++) {
-    struct Rule* r = parsedGrammar->GRAMMAR_RULES[i];
-    if (r == NULL || r->SYMBOLS == NULL || r->SYMBOLS->HEAD_SYMBOL == NULL) {
+    struct Rule* rule = parsedGrammar->GRAMMAR_RULES[i];
+    if (rule == NULL || rule->symbols == NULL || rule->symbols->HEAD_SYMBOL == NULL) {
       fprintf(stderr, "Error: Invalid rule at index %d\n", i);
       continue;
     }
 
-    int            lhsNonTerminal   = r->SYMBOLS->HEAD_SYMBOL->TYPE.NON_TERMINAL;
-    struct Symbol* rhsHead          = r->SYMBOLS->HEAD_SYMBOL->next;
+    int            lhsNonTerminal   = rule->symbols->HEAD_SYMBOL->symType.NON_TERMINAL;
+    struct Symbol* rhsHead          = rule->symbols->HEAD_SYMBOL->next;
     struct Symbol* trav             = rhsHead;
     int            epsilonGenerated = 1;
 
     // Process RHS of the rule
     while (trav != NULL) {
-      if (trav->IS_TERMINAL == 1) {
-        if (trav->TYPE.TERMINAL != TK_EPS) {
+      if (trav->isTerminal == 1) {
+        if (trav->symType.TERMINAL != TK_EPS) {
           // If first symbol is terminal, add rule to table
           epsilonGenerated                                 = 0;
-          pt->entries[lhsNonTerminal][trav->TYPE.TERMINAL] = r->RULE_NO;
+          parseTable->entries[lhsNonTerminal][trav->symType.TERMINAL] = rule->ruleNum;
           break;
         } else {
           // Epsilon rule
@@ -80,13 +80,13 @@ void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingT
       } else {
         // If first symbol is non-terminal, add rule for each terminal in FIRST set
         for (int j = 0; j < NUM_TERMINALS; j++) {
-          if (firstAndFollowSets->FIRST[trav->TYPE.NON_TERMINAL][j] == 1) {
-            pt->entries[lhsNonTerminal][j] = r->RULE_NO;
+          if (firstAndFollowSets->FIRST[trav->symType.NON_TERMINAL][j] == 1) {
+            parseTable->entries[lhsNonTerminal][j] = rule->ruleNum;
           }
         }
 
         // Check if this non-terminal can derive epsilon
-        if (firstAndFollowSets->FIRST[trav->TYPE.NON_TERMINAL][TK_EPS] == 0) {
+        if (firstAndFollowSets->FIRST[trav->symType.NON_TERMINAL][TK_EPS] == 0) {
           epsilonGenerated = 0;
           break;
         }
@@ -97,7 +97,7 @@ void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingT
     // If RHS can derive epsilon, add rule for each terminal in FOLLOW set
     if (epsilonGenerated) {
       for (int j = 0; j < NUM_TERMINALS; j++) {
-        if (firstAndFollowSets->FOLLOW[lhsNonTerminal][j] == 1) { pt->entries[lhsNonTerminal][j] = r->RULE_NO; }
+        if (firstAndFollowSets->FOLLOW[lhsNonTerminal][j] == 1) { parseTable->entries[lhsNonTerminal][j] = rule->ruleNum; }
       }
     }
   }
@@ -108,12 +108,6 @@ int isSynchronizingToken(TokenName token) {
           token == TK_ENDWHILE || token == TK_ELSE || token == TK_END || token == TK_CL || token == TK_SQR);
 }
 
-Token* skipComments(Token* token) {
-  while (token != NULL && token->tokenName == TK_COMMENT) { token = getToken(); }
-  return token;
-}
-
-// Helper function to create a copy of a token
 Token* createTokenCopy(Token* original) {
   if (original == NULL) return NULL;
 
@@ -129,7 +123,6 @@ Token* createTokenCopy(Token* original) {
   return copy;
 }
 
-// Helper function to create a synthetic token for error recovery
 Token* createSyntheticToken(int tokenType, int lineNo) {
   Token* synthetic = (Token*)malloc(sizeof(Token));
   if (synthetic == NULL) return NULL;
@@ -143,7 +136,6 @@ Token* createSyntheticToken(int tokenType, int lineNo) {
   return synthetic;
 }
 
-// Check if a token is in the FOLLOW set of a non-terminal
 int isInFollow(struct FirstAndFollow* firstAndFollowSets, int nonTerminal, int token) {
   if (firstAndFollowSets == NULL || nonTerminal < 0 || nonTerminal >= NUM_NONTERMINALS || token < 0 ||
       token >= NUM_TERMINALS) {
@@ -168,8 +160,8 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
 
   // Initialize components
   setupLexer(fd);
-  struct ParseTree* pt = initializeParseTree();
-  struct Stack*     st = initializeStack(pt);
+  struct ParseTree* parseTable = initializeParseTree();
+  struct Stack*     st = initializeStack(parseTable);
 
   // Reset error tracking flags
   syntaxErrorOccurred  = false;
@@ -183,7 +175,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
   if (inputToken == NULL) {
     printf("Empty input file or only comments\n");
     close(fd);
-    return pt;
+    return parseTable;
   }
 
   // Main parsing loop
@@ -213,9 +205,9 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
     }
 
     // Case 1: Terminal on top of the stack
-    if (stackTop->IS_LEAF_NODE == 1) {
+    if (stackTop->isLeaf == 1) {
       // Check for end of parsing
-      if (stackTop->NODE_TYPE.L.ENUM_ID == TK_DOLLAR) {
+      if (stackTop->nodeType.L.enumID == TK_DOLLAR) {
         if (inputToken == NULL || inputToken->tokenName == TK_EOF) {
           // Successful parse
           break;
@@ -232,9 +224,9 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
       }
 
       // Terminal matches input token
-      if (inputToken->tokenName == stackTop->NODE_TYPE.L.ENUM_ID) {
+      if (inputToken->tokenName == stackTop->nodeType.L.enumID) {
         // Store token in parse tree
-        stackTop->NODE_TYPE.L.TOKEN = createTokenCopy(inputToken);
+        stackTop->nodeType.L.TOKEN = createTokenCopy(inputToken);
 
         // Consume token and pop stack
         pop(st);
@@ -248,13 +240,13 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
         fprintf(stderr,
                 "Syntax error at line %d: Expected %s, found %s\n",
                 inputToken->lineNum,
-                getTerminal(stackTop->NODE_TYPE.L.ENUM_ID),
+                getTerminal(stackTop->nodeType.L.enumID),
                 getTerminal(inputToken->tokenName));
 
         syntaxErrorOccurred = true;
 
         // Create synthetic token for the parse tree
-        stackTop->NODE_TYPE.L.TOKEN = createSyntheticToken(stackTop->NODE_TYPE.L.ENUM_ID, inputToken->lineNum);
+        stackTop->nodeType.L.TOKEN = createSyntheticToken(stackTop->nodeType.L.enumID, inputToken->lineNum);
 
         // Pop terminal without consuming input
         pop(st);
@@ -263,7 +255,7 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
     }
     // Case 2: Non-terminal on top of the stack
     else {
-      int nonTerminalID = stackTop->NODE_TYPE.NL.ENUM_ID;
+      int nonTerminalID = stackTop->nodeType.NL.enumID;
       int tokenID       = inputToken->tokenName;
 
       // Bounds check before accessing parsing table
@@ -305,14 +297,14 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
           continue;
         }
 
-        struct Rule* r = parsedGrammar->GRAMMAR_RULES[ruleNumber];
-        addRuleToParseTree(stackTop, r);
+        struct Rule* rule = parsedGrammar->GRAMMAR_RULES[ruleNumber];
+        addRuleToParseTree(stackTop, rule);
 
         pop(st);
 
         // Push children onto stack in reverse order (skip pushing epsilon)
-        struct NaryTreeNode* childNode = stackTop->NODE_TYPE.NL.child;
-        if (childNode != NULL && !(childNode->IS_LEAF_NODE == 1 && childNode->NODE_TYPE.L.ENUM_ID == TK_EPS)) {
+        struct NaryTreeNode* childNode = stackTop->nodeType.NL.child;
+        if (childNode != NULL && !(childNode->isLeaf == 1 && childNode->nodeType.L.enumID == TK_EPS)) {
           pushTreeChildren(st, childNode);
         }
       }
@@ -331,16 +323,16 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
           // If token is in FOLLOW, create an empty derivation
           struct Symbol* epsilonSymbol = (struct Symbol*)malloc(sizeof(struct Symbol));
           if (epsilonSymbol != NULL) {
-            epsilonSymbol->IS_TERMINAL   = 1;
-            epsilonSymbol->TYPE.TERMINAL = TK_EPS;
+            epsilonSymbol->isTerminal   = 1;
+            epsilonSymbol->symType.TERMINAL = TK_EPS;
             epsilonSymbol->next          = NULL;
 
             struct SymbolList* sl = initializeSymbolList();
             if (sl != NULL) {
               struct Symbol* ntSymbol = (struct Symbol*)malloc(sizeof(struct Symbol));
               if (ntSymbol != NULL) {
-                ntSymbol->IS_TERMINAL       = 0;
-                ntSymbol->TYPE.NON_TERMINAL = nonTerminalID;
+                ntSymbol->isTerminal       = 0;
+                ntSymbol->symType.NON_TERMINAL = nonTerminalID;
                 ntSymbol->next              = epsilonSymbol;
 
                 addToSymbolList(sl, ntSymbol);
@@ -381,15 +373,15 @@ parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct First
   }
 
   close(fd);
-  return pt;
+  return parseTable;
 }
 
-void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
-  if (pt == NULL) return;
+void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
+  if (parseTable == NULL) return;
 
-  if (pt->IS_LEAF_NODE == 1) {
+  if (parseTable->isLeaf == 1) {
     // Process leaf node (terminal)
-    int tokenEnumID = pt->NODE_TYPE.L.ENUM_ID;
+    int tokenEnumID = parseTable->nodeType.L.enumID;
 
     // Initialize lexeme with spaces
     char lexeme[30];
@@ -398,8 +390,8 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
 
     // Fill lexeme field
     if (tokenEnumID != TK_EPS) {
-      if (pt->NODE_TYPE.L.TOKEN != NULL && pt->NODE_TYPE.L.TOKEN->tLexeme != NULL) {
-        strncpy(lexeme, pt->NODE_TYPE.L.TOKEN->tLexeme, strlen(pt->NODE_TYPE.L.TOKEN->tLexeme));
+      if (parseTable->nodeType.L.TOKEN != NULL && parseTable->nodeType.L.TOKEN->tLexeme != NULL) {
+        strncpy(lexeme, parseTable->nodeType.L.TOKEN->tLexeme, strlen(parseTable->nodeType.L.TOKEN->tLexeme));
       } else {
         strncpy(lexeme, "----", 4);
       }
@@ -413,13 +405,13 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     int   valueIfInt   = 0;
     float valueIfFloat = 0.0;
 
-    if (tokenEnumID != TK_EPS && pt->NODE_TYPE.L.TOKEN != NULL) {
-      lineNumber = pt->NODE_TYPE.L.TOKEN->lineNum;
-      isNumber   = pt->NODE_TYPE.L.TOKEN->isNum;
-      if (isNumber == 1 && pt->NODE_TYPE.L.TOKEN->VALUE != NULL)
-        valueIfInt = pt->NODE_TYPE.L.TOKEN->VALUE->INT_VALUE;
-      else if (isNumber == 2 && pt->NODE_TYPE.L.TOKEN->VALUE != NULL)
-        valueIfFloat = pt->NODE_TYPE.L.TOKEN->VALUE->FLOAT_VALUE;
+    if (tokenEnumID != TK_EPS && parseTable->nodeType.L.TOKEN != NULL) {
+      lineNumber = parseTable->nodeType.L.TOKEN->lineNum;
+      isNumber   = parseTable->nodeType.L.TOKEN->isNum;
+      if (isNumber == 1 && parseTable->nodeType.L.TOKEN->VALUE != NULL)
+        valueIfInt = parseTable->nodeType.L.TOKEN->VALUE->INT_VALUE;
+      else if (isNumber == 2 && parseTable->nodeType.L.TOKEN->VALUE != NULL)
+        valueIfFloat = parseTable->nodeType.L.TOKEN->VALUE->FLOAT_VALUE;
     }
 
     // Initialize token name with spaces
@@ -428,7 +420,7 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     tokenName[19] = '\0';
 
     // Fill token name field
-    char* obtainedTokenName = getTerminal(pt->NODE_TYPE.L.ENUM_ID);
+    char* obtainedTokenName = getTerminal(parseTable->nodeType.L.enumID);
     if (obtainedTokenName != NULL) { strncpy(tokenName, obtainedTokenName, strlen(obtainedTokenName)); }
 
     // Initialize parent field with spaces
@@ -437,8 +429,8 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     parent[29] = '\0';
 
     // Fill parent field
-    if (pt->parent != NULL) {
-      char* obtainedParent = getNonTerminal(pt->parent->NODE_TYPE.NL.ENUM_ID);
+    if (parseTable->parent != NULL) {
+      char* obtainedParent = getNonTerminal(parseTable->parent->nodeType.NL.enumID);
       if (obtainedParent != NULL) { strncpy(parent, obtainedParent, strlen(obtainedParent)); }
     } else {
       strncpy(parent, "ROOT", 4);
@@ -509,19 +501,19 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     int derivedLineNumber = -1;
 
     // Find first terminal child with a valid line number
-    struct NaryTreeNode* lineTrav = pt->NODE_TYPE.NL.child;
+    struct NaryTreeNode* lineTrav = parseTable->nodeType.NL.child;
     while (lineTrav != NULL && derivedLineNumber == -1) {
-      if (lineTrav->IS_LEAF_NODE == 1 && lineTrav->NODE_TYPE.L.TOKEN != NULL &&
-          lineTrav->NODE_TYPE.L.TOKEN->lineNum > 0) {
-        derivedLineNumber = lineTrav->NODE_TYPE.L.TOKEN->lineNum;
+      if (lineTrav->isLeaf == 1 && lineTrav->nodeType.L.TOKEN != NULL &&
+          lineTrav->nodeType.L.TOKEN->lineNum > 0) {
+        derivedLineNumber = lineTrav->nodeType.L.TOKEN->lineNum;
         break;
-      } else if (lineTrav->IS_LEAF_NODE == 0) {
+      } else if (lineTrav->isLeaf == 0) {
         // Try to find in non-leaf child's children recursively
-        struct NaryTreeNode* childTrav = lineTrav->NODE_TYPE.NL.child;
+        struct NaryTreeNode* childTrav = lineTrav->nodeType.NL.child;
         while (childTrav != NULL && derivedLineNumber == -1) {
-          if (childTrav->IS_LEAF_NODE == 1 && childTrav->NODE_TYPE.L.TOKEN != NULL &&
-              childTrav->NODE_TYPE.L.TOKEN->lineNum > 0) {
-            derivedLineNumber = childTrav->NODE_TYPE.L.TOKEN->lineNum;
+          if (childTrav->isLeaf == 1 && childTrav->nodeType.L.TOKEN != NULL &&
+              childTrav->nodeType.L.TOKEN->lineNum > 0) {
+            derivedLineNumber = childTrav->nodeType.L.TOKEN->lineNum;
             break;
           }
           childTrav = childTrav->next;
@@ -530,11 +522,11 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
       lineTrav = lineTrav->next;
     }
 
-    struct NaryTreeNode* trav = pt->NODE_TYPE.NL.child;
+    struct NaryTreeNode* trav = parseTable->nodeType.NL.child;
 
     // Process children first (pre-order traversal)
     if (trav != NULL) {
-      printParseTreeHelper(pt->NODE_TYPE.NL.child, f);
+      printParseTreeHelper(parseTable->nodeType.NL.child, f);
       trav = trav->next;
     }
 
@@ -550,15 +542,15 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
     parent[29] = '\0';
 
     // Fill parent field if not root
-    if (pt->parent != NULL) {
-      char* obtainedParent = getNonTerminal(pt->parent->NODE_TYPE.NL.ENUM_ID);
+    if (parseTable->parent != NULL) {
+      char* obtainedParent = getNonTerminal(parseTable->parent->nodeType.NL.enumID);
       if (obtainedParent != NULL) { strncpy(parent, obtainedParent, strlen(obtainedParent)); }
     } else {
       strncpy(parent, "ROOT", 4);
     }
 
     // Get current node symbol (non-terminal name)
-    char* nodeSymbol = getNonTerminal(pt->NODE_TYPE.NL.ENUM_ID);
+    char* nodeSymbol = getNonTerminal(parseTable->nodeType.NL.enumID);
 
     // format: lexeme lineno tokenName valueIfNumber parentNodeSymbol isLeafNode NodeSymbol
     if (derivedLineNumber == -1) {
@@ -583,8 +575,8 @@ void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f) {
   }
 }
 
-void writeParseTreeToFile(struct ParseTree* pt, char* outputFile) {
-  if (pt == NULL) {
+void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile) {
+  if (parseTable == NULL) {
     fprintf(stderr, "Error: NULL parse tree in writeParseTreeToFile\n");
     return;
   }
@@ -600,11 +592,7 @@ void writeParseTreeToFile(struct ParseTree* pt, char* outputFile) {
     return;
   }
 
-  printParseTreeHelper(pt->root, f);
+  printParseTreeHelper(parseTable->root, f);
 
   if (f != stdout) fclose(f);
-}
-
-int getErrorStatus() {
-  return (lexicalErrorOccurred || syntaxErrorOccurred);
 }

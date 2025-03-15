@@ -16,10 +16,10 @@ Group No. 46
 
 struct Grammar*        extractGrammar();
 struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar);
-void                   createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* pt);
+void                   createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable);
 struct ParseTree*
      parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
-void writeParseTreeToFile(struct ParseTree* pt, char* outputFile);
+void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile);
 int  getErrorStatus();
 
 #endif

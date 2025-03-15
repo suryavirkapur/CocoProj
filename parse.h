@@ -13,12 +13,12 @@ Group No. 46
 #include "grammar.h"
 #include <stdio.h>
 
-struct ParsingTable* initializeParsingTable();
-void                 createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* pt);
+struct ParsingTable* createParsingTable();
+void                 createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable);
 struct ParseTree*
      parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
-void writeParseTreeToFile(struct ParseTree* pt, char* outputFile);
-void printParseTreeHelper(struct NaryTreeNode* pt, FILE* f);
+void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile);
+void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f);
 int  getErrorStatus();
 int  isSynchronizingToken(TokenName token);
 

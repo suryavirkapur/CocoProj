@@ -179,10 +179,10 @@ int initializeGrammar() {
 }
 
 struct Rule* initializeRule(struct SymbolList* sl, int ruleCount) {
-  struct Rule* r = (struct Rule*)malloc(sizeof(struct Rule));
-  r->SYMBOLS     = sl;
-  r->RULE_NO     = ruleCount;
-  return r;
+  struct Rule* rule = (struct Rule*)malloc(sizeof(struct Rule));
+  rule->symbols     = sl;
+  rule->ruleNum     = ruleCount;
+  return rule;
 }
 
 struct NonTerminalRuleRecords** initializeNonTerminalRecords() {
@@ -264,8 +264,8 @@ struct Grammar* extractGrammar() {
             close(fd);
             exit(1);
           }
-          s->TYPE.TERMINAL = TK_EPS;
-          s->IS_TERMINAL   = 1;
+          s->symType.TERMINAL = TK_EPS;
+          s->isTerminal   = 1;
           s->next          = NULL;
         } else {
           s = initializeSymbol(symbol);
@@ -292,33 +292,33 @@ struct Grammar* extractGrammar() {
 
         if (symbolsRead == 1) {
           if (currentNonTerminal == NULL) {
-            if (s->IS_TERMINAL == 1) {
+            if (s->isTerminal == 1) {
               printf("ERROR: First symbol in rule cannot be a terminal: %s\n", symbol);
               free(symbol);
               close(fd);
               exit(1);
             }
 
-            nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] =
+            nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
                 (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-            if (nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] == NULL) {
+            if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
               printf("ERROR: Memory allocation failed for NTRR\n");
               free(symbol);
               close(fd);
               exit(1);
             }
-            nonTerminalRuleRecords[s->TYPE.NON_TERMINAL]->start = ruleCount;
-          } else if (currentNonTerminal->TYPE.NON_TERMINAL != s->TYPE.NON_TERMINAL) {
-            nonTerminalRuleRecords[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount - 1;
-            nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] =
+            nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
+          } else if (currentNonTerminal->symType.NON_TERMINAL != s->symType.NON_TERMINAL) {
+            nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
+            nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
                 (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-            if (nonTerminalRuleRecords[s->TYPE.NON_TERMINAL] == NULL) {
+            if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
               printf("ERROR: Memory allocation failed for NTRR\n");
               free(symbol);
               close(fd);
               exit(1);
             }
-            nonTerminalRuleRecords[s->TYPE.NON_TERMINAL]->start = ruleCount;
+            nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
           }
           currentNonTerminal = s;
         }
@@ -333,7 +333,7 @@ struct Grammar* extractGrammar() {
         }
         symbol[0] = '\0';
       }
-    } else if (c == '\n' || c == '\r') {
+    } else if (c == '\n' || c == '\rule') {
       if (strlen(symbol) > 0) {
         // Process the last symbol on the line
         struct Symbol* s;
@@ -345,8 +345,8 @@ struct Grammar* extractGrammar() {
             close(fd);
             exit(1);
           }
-          s->TYPE.TERMINAL = TK_EPS;
-          s->IS_TERMINAL   = 1;
+          s->symType.TERMINAL = TK_EPS;
+          s->isTerminal   = 1;
           s->next          = NULL;
         } else {
           s = initializeSymbol(symbol);
@@ -371,15 +371,15 @@ struct Grammar* extractGrammar() {
         addToSymbolList(sl, s);
 
         // Create the rule and add it to the grammar
-        struct Rule* r = initializeRule(sl, ruleCount);
-        if (r == NULL) {
+        struct Rule* rule = initializeRule(sl, ruleCount);
+        if (rule == NULL) {
           printf("ERROR: Failed to initialize rule\n");
           free(symbol);
           close(fd);
           exit(1);
         }
 
-        parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
+        parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
         ruleCount++;
 
         // Reset for next line
@@ -396,7 +396,7 @@ struct Grammar* extractGrammar() {
       }
 
       // Skip any additional newline characters
-      if (c == '\r') {
+      if (c == '\rule') {
         char nextChar;
         if (read(fd, &nextChar, sizeof(char)) > 0 && nextChar != '\n') {
           lseek(fd, -1, SEEK_CUR); // Move back if not followed by '\n'
@@ -436,15 +436,15 @@ struct Grammar* extractGrammar() {
     if (strcmp(symbol, "eps") == 0) {
       s = (struct Symbol*)malloc(sizeof(struct Symbol));
       if (s != NULL) {
-        s->TYPE.TERMINAL = TK_EPS;
-        s->IS_TERMINAL   = 1;
+        s->symType.TERMINAL = TK_EPS;
+        s->isTerminal   = 1;
         s->next          = NULL;
 
         if (sl != NULL) {
           addToSymbolList(sl, s);
-          struct Rule* r = initializeRule(sl, ruleCount);
-          if (r != NULL) {
-            parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
+          struct Rule* rule = initializeRule(sl, ruleCount);
+          if (rule != NULL) {
+            parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
             ruleCount++;
           }
         }
@@ -453,9 +453,9 @@ struct Grammar* extractGrammar() {
       s = initializeSymbol(symbol);
       if (s != NULL && sl != NULL) {
         addToSymbolList(sl, s);
-        struct Rule* r = initializeRule(sl, ruleCount);
-        if (r != NULL) {
-          parsedGrammar->GRAMMAR_RULES[ruleCount] = r;
+        struct Rule* rule = initializeRule(sl, ruleCount);
+        if (rule != NULL) {
+          parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
           ruleCount++;
         }
       }
@@ -466,7 +466,7 @@ struct Grammar* extractGrammar() {
   close(fd);
 
   if (currentNonTerminal != NULL) {
-    nonTerminalRuleRecords[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount - 1;
+    nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
   }
 
   return parsedGrammar;
