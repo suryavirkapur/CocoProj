@@ -152,7 +152,7 @@ void setupLexer(int f) {
   backtrackingState = 7; // first backtracking state
 }
 
-int getInputStream() {
+int setupInputStream() {
   // 2 buffers
   if (inputBytesRead != 0) return EOF;
 
@@ -171,22 +171,20 @@ int getInputStream() {
 }
 
 char nextChar() {
-  if (!forward) { // first-time initialization
-    if (getInputStream() == -1) return EOF;
+  if (!forward) { 
+    if (setupInputStream() == -1) return EOF;
     lexemeStart = buffPair[currentBufferIsSecond];
     forward     = buffPair[currentBufferIsSecond];
   }
 
-  // reached the end of the current buffer, load the next one.
   if (forward - buffPair[currentBufferIsSecond] >= BUFFER_SIZE - 1) {
-    if (getInputStream() == -1) return EOF;
+    if (setupInputStream() == -1) return EOF;
     forward = buffPair[currentBufferIsSecond];
   }
 
   // get the next character
   char c = *forward++;
 
-  // update line count if necessary.
   if (!lookaheadCharacter && c == '\n') { lineCount++; }
   lookaheadCharacter = 0;
 

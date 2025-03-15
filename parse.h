@@ -18,7 +18,7 @@ void                 createParseTable(struct FirstAndFollow* firstAndFollowSets,
 struct ParseTree*
      parseSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
 void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile);
-void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f);
+void printParseTable(struct NaryTreeNode* parseTable, FILE* f);
 int  getErrorStatus();
 int  isSynchronizingToken(TokenName token);
 

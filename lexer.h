@@ -11,7 +11,7 @@ Group No. 46
 void   setupBuffers(int f);
 void   setupLexer(int f);
 void   removeComments(char* testCaseFile, char* cleanFile);
-int    getInputStream();
+int    setupInputStream();
 char   nextChar();
 void   retract(int amt);
 Token* fillToken(Token* t, TokenName tokenName, char* lexeme, int lineNumber, int isNumber, tVal* value);

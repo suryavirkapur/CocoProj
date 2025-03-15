@@ -146,17 +146,14 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
     fprintf(stderr, "Line No. N/A Error: Unable to open source file %s\n", sourceFile);
     return NULL;
   }
-
-  // initialize components
+  // new lexer
   setupLexer(fd);
   struct ParseTree* parseTable = initializeParseTree();
   struct Stack*     st         = initializeStack(parseTable);
 
-  // reset error tracking flags
   syntaxErrorOccurred  = false;
   lexicalErrorOccurred = false;
 
-  // get first token
   Token* inputToken = getToken();
 
   // skip comments
@@ -168,17 +165,14 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
     return parseTable;
   }
 
-  // main parsing loop
   while (1) {
     if (inputToken == NULL) { break; }
 
-    // skip comments
     if (inputToken->tokenName == TK_COMMENT) {
       inputToken = getToken();
       continue;
     }
 
-    // handle lexical errors
     if (inputToken->tokenName == TK_ERR) {
       lexicalErrorOccurred = true;
       inputToken           = getToken();
@@ -195,15 +189,12 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
 
     // terminal on top of stack
     if (stackTop->isLeaf == 1) {
-      // check for end of parsing
       if (stackTop->nodeType.L.enumID == TK_DOLLAR) {
         if (inputToken == NULL || inputToken->tokenName == TK_EOF) {
-          // successful parse
+
           break;
         }
-        // handle extra tokens
         syntaxErrorOccurred = true;
-        // consume remaining tokens
         while (inputToken != NULL && inputToken->tokenName != TK_EOF) {
           inputToken = getToken();
           while (inputToken != NULL && inputToken->tokenName == TK_COMMENT) { inputToken = getToken(); }
@@ -296,9 +287,9 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
                 getNonTerminal(nonTerminalID));
         syntaxErrorOccurred = true;
 
-        // error recovery
         if (isInFollow(firstAndFollowSets, nonTerminalID, tokenID)) {
-          // token in followSet set - create empty derivation
+          // token in followSet 
+          // empty?? derivation
           struct Symbol* epsilonSymbol = (struct Symbol*)malloc(sizeof(struct Symbol));
           if (epsilonSymbol != NULL) {
             epsilonSymbol->isTerminal       = 1;
@@ -349,18 +340,15 @@ parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFo
   return parseTable;
 }
 
-void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
+void printParseTable(struct NaryTreeNode* parseTable, FILE* f) {
   if (parseTable == NULL) return;
   if (parseTable->isLeaf == 1) {
-    // process leaf node (terminal)
     int tokenEnumID = parseTable->nodeType.L.enumID;
 
-    // initialize lexeme with spaces
     char lexeme[30];
     memset(lexeme, ' ', 29);
     lexeme[29] = '\0';
 
-    // fill lexeme field
     if (tokenEnumID != TK_EPS) {
       if (parseTable->nodeType.L.TOKEN != NULL && parseTable->nodeType.L.TOKEN->tLexeme != NULL) {
         strncpy(lexeme, parseTable->nodeType.L.TOKEN->tLexeme, strlen(parseTable->nodeType.L.TOKEN->tLexeme));
@@ -371,7 +359,6 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
       strcpy(lexeme, "EPSILON");
     }
 
-    // get token value and line number
     int   lineNumber   = -1;
     int   isNumber     = 0;
     int   valueIfInt   = 0;
@@ -386,21 +373,16 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
         valueIfFloat = parseTable->nodeType.L.TOKEN->VALUE->FLOAT_VALUE;
     }
 
-    // initialize token name with spaces
     char tokenName[20];
     memset(tokenName, ' ', 19);
     tokenName[19] = '\0';
-
-    // fill token name field
     char* obtainedTokenName = getTerminal(parseTable->nodeType.L.enumID);
     if (obtainedTokenName != NULL) { strncpy(tokenName, obtainedTokenName, strlen(obtainedTokenName)); }
 
-    // initialize parent field with spaces
     char parent[30];
     memset(parent, ' ', 29);
     parent[29] = '\0';
 
-    // fill parent field
     if (parseTable->parent != NULL) {
       char* obtainedParent = getNonTerminal(parseTable->parent->nodeType.NL.enumID);
       if (obtainedParent != NULL) { strncpy(parent, obtainedParent, strlen(obtainedParent)); }
@@ -408,9 +390,7 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
       strcpy(parent, "ROOT");
     }
 
-    // print based on format: lexeme lineno tokenName valueIfNumber parentNodeSymbol isLeafNode NodeSymbol
     if (lineNumber == -1) {
-      // no valid line number
       if (tokenEnumID == TK_EPS || isNumber == 0)
         fprintf(
             f, "%-30s %-3s %-20s %-10s %-30s %-3s %-30s\n", lexeme, "---", tokenName, "----", parent, "yes", "----");
@@ -468,18 +448,15 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
                 "----");
     }
   } else {
-    // process non-leaf node (non-terminal)
-    // try to derive line number from children
+    // process non-terminal
     int derivedLineNumber = -1;
 
-    // find first terminal child with a valid line number
     struct NaryTreeNode* lineTrav = parseTable->nodeType.NL.child;
     while (lineTrav != NULL && derivedLineNumber == -1) {
       if (lineTrav->isLeaf == 1 && lineTrav->nodeType.L.TOKEN != NULL && lineTrav->nodeType.L.TOKEN->lineNum > 0) {
         derivedLineNumber = lineTrav->nodeType.L.TOKEN->lineNum;
         break;
       } else if (lineTrav->isLeaf == 0) {
-        // try to find in non-leaf child's children recursively
         struct NaryTreeNode* childTrav = lineTrav->nodeType.NL.child;
         while (childTrav != NULL && derivedLineNumber == -1) {
           if (childTrav->isLeaf == 1 && childTrav->nodeType.L.TOKEN != NULL &&
@@ -495,19 +472,17 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
 
     struct NaryTreeNode* trav = parseTable->nodeType.NL.child;
 
-    // process children first (pre-order traversal)
+    // process children first 
     if (trav != NULL) {
-      printParseTreeHelper(parseTable->nodeType.NL.child, f);
+      printParseTable(parseTable->nodeType.NL.child, f);
       trav = trav->next;
     }
 
-    // initialize lexeme with dashes
     char lexeme[30];
     memset(lexeme, ' ', 29);
     lexeme[29] = '\0';
     strcpy(lexeme, "----");
 
-    // initialize parent field with spaces
     char parent[30];
     memset(parent, ' ', 29);
     parent[29] = '\0';
@@ -540,7 +515,7 @@ void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f) {
 
     // process remaining siblings
     while (trav != NULL) {
-      printParseTreeHelper(trav, f);
+      printParseTable(trav, f);
       trav = trav->next;
     }
   }
@@ -563,7 +538,7 @@ void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile) {
     return;
   }
 
-  printParseTreeHelper(parseTable->root, f);
+  printParseTable(parseTable->root, f);
 
   if (f != stdout) fclose(f);
 }
