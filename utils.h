@@ -19,6 +19,8 @@ Group No. 46
 #include <sys/types.h>
 #include <unistd.h>
 
+void ensureTrailingNewlines(const char* filename);
+
 int computeHash(const char* str);
 
 bool isCharacterInRange(const char character, const char rangeStart, const char rangeEnd);

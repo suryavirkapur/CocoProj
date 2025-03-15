@@ -18,8 +18,8 @@ struct NonTerminalRuleRecords** initializeNonTerminalRecords();
 struct Rule*                    initializeRule(struct SymbolList* sl, int ruleCount);
 int                             findInNonTerminalMap(char* str);
 int                             findInTerminalMap(char* str);
-char*                           getTerminal(int enumId);
-char*                           getNonTerminal(int enumId);
+char*                           getTerminal(int mapIndex);
+char*                           getNonTerminal(int mapIndex);
 
 extern struct Grammar*                 parsedGrammar;
 extern struct NonTerminalRuleRecords** nonTerminalRuleRecords;

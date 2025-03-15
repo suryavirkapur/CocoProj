@@ -18,6 +18,48 @@ Group No. 46
 
 #include "constants.h"
 
+void ensureTrailingNewlines(const char* filename) {
+  int fd = open(filename, O_RDWR);
+  if (fd == -1) {
+    perror("open in ensureTrailingNewlines");
+    return;
+  }
+
+  off_t filesize = lseek(fd, 0, SEEK_END);
+  if (filesize == -1) {
+    perror("lseek in ensureTrailingNewlines");
+    close(fd);
+    return;
+  }
+
+  int needNewlines = 1;
+  if (filesize >= 2) {
+    char lastTwo[2];
+    if (lseek(fd, -2, SEEK_END) == -1) {
+      perror("lseek (to check last two bytes)");
+      close(fd);
+      return;
+    }
+    if (read(fd, lastTwo, 2) != 2) {
+      perror("read in ensureTrailingNewlines");
+      close(fd);
+      return;
+    }
+    if (lastTwo[0] == '\n' && lastTwo[1] == '\n') { needNewlines = 0; }
+  }
+
+  if (needNewlines) {
+    if (lseek(fd, 0, SEEK_END) == -1) {
+      perror("lseek (append newlines)");
+      close(fd);
+      return;
+    }
+    if (write(fd, "\n\n", 2) != 2) { perror("write in ensureTrailingNewlines"); }
+  }
+
+  close(fd);
+}
+
 int str2int(const char* str) {
   if (str == NULL || *str == '\0') return 0;
 

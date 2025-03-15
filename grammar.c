@@ -162,12 +162,12 @@ int findInNonTerminalMap(char* str) {
   return -1;
 }
 
-char* getTerminal(int enumId) {
-  return TerminalMap[enumId];
+char* getTerminal(int mapIndex) {
+  return TerminalMap[mapIndex];
 }
 
-char* getNonTerminal(int enumId) {
-  return NonTerminalMap[enumId];
+char* getNonTerminal(int mapIndex) {
+  return NonTerminalMap[mapIndex];
 }
 
 int initializeGrammar() {
@@ -265,8 +265,8 @@ struct Grammar* extractGrammar() {
             exit(1);
           }
           s->symType.TERMINAL = TK_EPS;
-          s->isTerminal   = 1;
-          s->next          = NULL;
+          s->isTerminal       = 1;
+          s->next             = NULL;
         } else {
           s = initializeSymbol(symbol);
           if (s == NULL) {
@@ -346,8 +346,8 @@ struct Grammar* extractGrammar() {
             exit(1);
           }
           s->symType.TERMINAL = TK_EPS;
-          s->isTerminal   = 1;
-          s->next          = NULL;
+          s->isTerminal       = 1;
+          s->next             = NULL;
         } else {
           s = initializeSymbol(symbol);
           if (s == NULL) {
@@ -437,8 +437,8 @@ struct Grammar* extractGrammar() {
       s = (struct Symbol*)malloc(sizeof(struct Symbol));
       if (s != NULL) {
         s->symType.TERMINAL = TK_EPS;
-        s->isTerminal   = 1;
-        s->next          = NULL;
+        s->isTerminal       = 1;
+        s->next             = NULL;
 
         if (sl != NULL) {
           addToSymbolList(sl, s);

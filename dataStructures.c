@@ -66,7 +66,7 @@ struct Symbol* initializeSymbol(char* symbol) {
     idTerminal = findInTerminalMap(symbol);
     if (idTerminal != -1) {
       s->symType.TERMINAL = idTerminal;
-      s->isTerminal   = 1;
+      s->isTerminal       = 1;
     } else {
       printf("Error: Unknown terminal symbol: %s\n", symbol);
       free(s); // Clean up allocated memory
@@ -77,7 +77,7 @@ struct Symbol* initializeSymbol(char* symbol) {
     idNonTerminal = findInNonTerminalMap(symbol);
     if (idNonTerminal != -1) {
       s->symType.NON_TERMINAL = idNonTerminal;
-      s->isTerminal       = 0;
+      s->isTerminal           = 0;
     } else {
       printf("Error: Unknown symbol: %s\n", symbol);
       free(s); // Clean up allocated memory
@@ -110,21 +110,21 @@ void addToSymbolList(struct SymbolList* symList, struct Symbol* s) {
   symList->RULE_LENGTH += 1;
 }
 
-struct NaryTreeNode* createLeafNode(int enumId) {
+struct NaryTreeNode* createLeafNode(int mapIndex) {
   struct NaryTreeNode* ntn = (struct NaryTreeNode*)malloc(sizeof(struct NaryTreeNode));
-  ntn->isLeaf        = 1;
-  ntn->nodeType.L.enumID = enumId;
+  ntn->isLeaf              = 1;
+  ntn->nodeType.L.enumID   = mapIndex;
   ntn->next                = NULL;
   return ntn;
 }
 
-struct NaryTreeNode* createNonLeafNode(int enumId) {
-  struct NaryTreeNode* ntn          = (struct NaryTreeNode*)malloc(sizeof(struct NaryTreeNode));
-  ntn->isLeaf                 = 0;
-  ntn->nodeType.NL.enumID         = enumId;
+struct NaryTreeNode* createNonLeafNode(int mapIndex) {
+  struct NaryTreeNode* ntn     = (struct NaryTreeNode*)malloc(sizeof(struct NaryTreeNode));
+  ntn->isLeaf                  = 0;
+  ntn->nodeType.NL.enumID      = mapIndex;
   ntn->nodeType.NL.numChildren = 0;
-  ntn->next                         = NULL;
-  ntn->nodeType.NL.child           = NULL;
+  ntn->next                    = NULL;
+  ntn->nodeType.NL.child       = NULL;
   return ntn;
 }
 
@@ -181,15 +181,14 @@ void addRuleToParseTree(struct NaryTreeNode* ntn, struct Rule* rule) {
     trav = trav->next;
   }
 
-  ntn->nodeType.NL.ruleNum         = rule->ruleNum;
-  ntn->nodeType.NL.child           = childHead;
+  ntn->nodeType.NL.ruleNum     = rule->ruleNum;
+  ntn->nodeType.NL.child       = childHead;
   ntn->nodeType.NL.numChildren = numberChild;
 }
 
-
 struct StackNode* createStackNode(struct NaryTreeNode* ntn) {
   struct StackNode* stn = (struct StackNode*)malloc(sizeof(struct StackNode));
-  stn->treeNode        = ntn;
+  stn->treeNode         = ntn;
   stn->next             = NULL;
   return stn;
 }
@@ -235,7 +234,7 @@ void pushTreeChildren(struct Stack* st, struct NaryTreeNode* ntn) {
 struct Stack* initializeStack(struct ParseTree* parseTable) {
   struct Stack* st = (struct Stack*)malloc(sizeof(struct Stack));
   st->HEAD         = NULL;
-  st->numNodes    = 0;
+  st->numNodes     = 0;
 
   union SymbolType sType;
   sType.TERMINAL           = TK_DOLLAR;

@@ -75,32 +75,32 @@ struct FirstAndFollow* createFirstAndFollowSets() {
   return firstAndFollowSets;
 }
 
-void computeFirstSets(int enumId, int** firstVector) {
- printf("[DEBUG] Starting computeFirstSets\n");
-  if (enumId < 0 || enumId >= NUM_NONTERMINALS) {
-    fprintf(stderr, "Error: Invalid non-terminal ID %d in computeFirstSets\n", enumId);
+void computeFirstSets(int mapIndex, int** firstVector) {
+  printf("[DEBUG] Starting computeFirstSets\n");
+  if (mapIndex < 0 || mapIndex >= NUM_NONTERMINALS) {
+    fprintf(stderr, "Error: Invalid non-terminal ID %d in computeFirstSets\n", mapIndex);
     return;
   }
 
-  if (nonTerminalProcessed[enumId]) { return; }
+  if (nonTerminalProcessed[mapIndex]) { return; }
 
-  nonTerminalProcessed[enumId] = true;
+  nonTerminalProcessed[mapIndex] = true;
 
-  if (nonTerminalRuleRecords[enumId] == NULL) {
-    fprintf(stderr, "Error: NULL rule record for non-terminal %d (%s)\n", enumId, getNonTerminal(enumId));
+  if (nonTerminalRuleRecords[mapIndex] == NULL) {
+    fprintf(stderr, "Error: NULL rule record for non-terminal %d (%s)\n", mapIndex, getNonTerminal(mapIndex));
     return;
   }
 
-  int ruleStartIndex = nonTerminalRuleRecords[enumId]->start;
-  int ruleEndIndex   = nonTerminalRuleRecords[enumId]->end;
+  int ruleStartIndex = nonTerminalRuleRecords[mapIndex]->start;
+  int ruleEndIndex   = nonTerminalRuleRecords[mapIndex]->end;
 
   if (ruleStartIndex < 1 || ruleEndIndex >= parsedGrammar->GRAMMAR_RULES_SIZE) {
     fprintf(stderr,
             "Error: Invalid rule range [%d, %d] for non-terminal %d (%s)\n",
             ruleStartIndex,
             ruleEndIndex,
-            enumId,
-            getNonTerminal(enumId));
+            mapIndex,
+            getNonTerminal(mapIndex));
     return;
   }
 
@@ -125,15 +125,15 @@ void computeFirstSets(int enumId, int** firstVector) {
     struct Symbol* firstRhsSymbol = rule->symbols->HEAD_SYMBOL->next;
 
     if (firstRhsSymbol == NULL) {
-      firstVector[enumId][TK_EPS] = 1;
+      firstVector[mapIndex][TK_EPS] = 1;
       continue;
     }
 
     if (firstRhsSymbol->isTerminal) {
       if (firstRhsSymbol->symType.TERMINAL == TK_EPS) {
-        firstVector[enumId][TK_EPS] = 1;
+        firstVector[mapIndex][TK_EPS] = 1;
       } else {
-        firstVector[enumId][firstRhsSymbol->symType.TERMINAL] = 1;
+        firstVector[mapIndex][firstRhsSymbol->symType.TERMINAL] = 1;
       }
     } else {
       int nextNonTerminalId = firstRhsSymbol->symType.NON_TERMINAL;
@@ -146,17 +146,17 @@ void computeFirstSets(int enumId, int** firstVector) {
       if (!nonTerminalProcessed[nextNonTerminalId]) { computeFirstSets(nextNonTerminalId, firstVector); }
 
       for (int i = 0; i < NUM_TERMINALS; i++) {
-        if (i != TK_EPS && firstVector[nextNonTerminalId][i] == 1) { firstVector[enumId][i] = 1; }
+        if (i != TK_EPS && firstVector[nextNonTerminalId][i] == 1) { firstVector[mapIndex][i] = 1; }
       }
 
       if (firstVector[nextNonTerminalId][TK_EPS] == 1) {
         struct Symbol* nextSymbol = firstRhsSymbol->next;
-        while (nextSymbol != NULL && firstVector[enumId][TK_EPS] == 0) {
+        while (nextSymbol != NULL && firstVector[mapIndex][TK_EPS] == 0) {
           if (nextSymbol->isTerminal) {
             if (nextSymbol->symType.TERMINAL == TK_EPS) {
-              firstVector[enumId][TK_EPS] = 1;
+              firstVector[mapIndex][TK_EPS] = 1;
             } else {
-              firstVector[enumId][nextSymbol->symType.TERMINAL] = 1;
+              firstVector[mapIndex][nextSymbol->symType.TERMINAL] = 1;
               break;
             }
           } else {
@@ -170,7 +170,7 @@ void computeFirstSets(int enumId, int** firstVector) {
             if (!nonTerminalProcessed[nextNextNonTerminalId]) { computeFirstSets(nextNextNonTerminalId, firstVector); }
 
             for (int i = 0; i < NUM_TERMINALS; i++) {
-              if (i != TK_EPS && firstVector[nextNextNonTerminalId][i] == 1) { firstVector[enumId][i] = 1; }
+              if (i != TK_EPS && firstVector[nextNextNonTerminalId][i] == 1) { firstVector[mapIndex][i] = 1; }
             }
 
             if (firstVector[nextNextNonTerminalId][TK_EPS] == 0) { break; }
@@ -178,7 +178,7 @@ void computeFirstSets(int enumId, int** firstVector) {
           nextSymbol = nextSymbol->next;
         }
 
-        if (nextSymbol == NULL) { firstVector[enumId][TK_EPS] = 1; }
+        if (nextSymbol == NULL) { firstVector[mapIndex][TK_EPS] = 1; }
       }
     }
   }
@@ -495,7 +495,7 @@ struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar) 
         fprintf(stderr, "Error: No rule records for non-terminal %d: %s\n", i, getNonTerminal(i));
         continue;
       }
-      computeFirstSets(i,firstAndFollowSets->FIRST);
+      computeFirstSets(i, firstAndFollowSets->FIRST);
     }
   }
 

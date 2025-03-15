@@ -16,6 +16,8 @@ Group No. 46
 #include <time.h>
 #include <unistd.h>
 
+#include "utils.h"
+
 int main(int argc, char* argv[]) {
 
   printf("Group 46: Suryavir, Ronit, Anagh, Harshwardhan\n");
@@ -25,7 +27,8 @@ int main(int argc, char* argv[]) {
   printf("\td. No segmentation faults or memory leaks detected across 6 test cases.\n");
   printf("\te. Lexer tests (T1-T2) work.\n");
   printf("\tf. Parser tests (T3-T5) work.\n");
-  printf("\tg. Parser test (T6) detects errors, we need to do the formatting of errors, and redo the AST stack, \n \t\t\tdoesn't work on our test cases (S1-8).\n");
+  printf("\tg. Parser test (T6) detects errors, we need to do the formatting of errors, and redo the AST stack, \n "
+         "\t\t\tdoesn't work on our test cases (S1-8).\n");
 
   int userOption;
 
@@ -40,11 +43,7 @@ int main(int argc, char* argv[]) {
   printf("\t3: to verify the syntactic correctness of the input source code and printing the parse tree\n");
   printf("\t4: to print the total time taken by of lexer and parser to verify the syntactic correctness\n");
 
-  int appendFd = open(argv[1], O_WRONLY | O_APPEND);
-  if (appendFd != -1) {
-    write(appendFd, "\n\n", 2);
-    close(appendFd);
-  } else {}
+  ensureTrailingNewlines(argv[1]);
 
   while (1) {
     printf("Enter your option: ");

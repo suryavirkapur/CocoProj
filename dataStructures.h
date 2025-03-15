@@ -156,8 +156,8 @@ char*              copyLexeme(char* str);
 
 // parse tree ops
 struct ParseTree*    initializeParseTree();
-struct NaryTreeNode* createLeafNode(int enumId);
-struct NaryTreeNode* createNonLeafNode(int enumId);
+struct NaryTreeNode* createLeafNode(int mapIndex);
+struct NaryTreeNode* createNonLeafNode(int mapIndex);
 struct NaryTreeNode* createNode(int isTerminal, union SymbolType type, struct NaryTreeNode* parent);
 void                 addRuleToParseTree(struct NaryTreeNode* ntn, struct Rule* rule);
 

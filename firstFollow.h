@@ -13,7 +13,7 @@ Group No. 46
 #include "grammar.h"
 
 struct FirstAndFollow* createFirstAndFollowSets();
-void                   computeFirstSets(int enumId, int** firstVector);
+void                   computeFirstSets(int mapIndex, int** firstVector);
 void                   fillFirst(int** firstVector, struct Grammar* parsedGrammar);
 void                   populateFollow(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
 void                   fillFollowF(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
