@@ -22,7 +22,7 @@ extern int  symbolVectorSize;
 extern bool syntaxErrorOccurred;
 extern bool lexicalErrorOccurred;
 
-extern char* TerminalID[];
-extern char* NonTerminalID[];
+extern char* TerminalMap[];
+extern char* NonTerminalMap[];
 
 #endif
