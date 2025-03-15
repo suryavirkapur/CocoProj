@@ -146,9 +146,9 @@ int isInFollow(struct FirstAndFollow* firstAndFollowSets, int nonTerminal, int t
 }
 
 struct ParseTree*
-parseInputSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets) {
+parseSourceCode(char* sourceFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets) {
   if (sourceFile == NULL || pTable == NULL || firstAndFollowSets == NULL) {
-    fprintf(stderr, "Error: NULL parameter in parseInputSourceCode\n");
+    fprintf(stderr, "Error: NULL parameter in parseSourceCode\n");
     return NULL;
   }
 

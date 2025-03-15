@@ -16,7 +16,7 @@ Group No. 46
 struct ParsingTable* createParsingTable();
 void                 createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable);
 struct ParseTree*
-     parseInputSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
+     parseSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
 void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile);
 void printParseTreeHelper(struct NaryTreeNode* parseTable, FILE* f);
 int  getErrorStatus();

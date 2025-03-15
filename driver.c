@@ -40,6 +40,12 @@ int main(int argc, char* argv[]) {
   printf("\t3: to verify the syntactic correctness of the input source code and printing the parse tree\n");
   printf("\t4: to print the total time taken by of lexer and parser to verify the syntactic correctness\n");
 
+  int appendFd = open(argv[1], O_WRONLY | O_APPEND);
+  if (appendFd != -1) {
+    write(appendFd, "\n\n", 2);
+    close(appendFd);
+  } else {}
+
   while (1) {
     printf("Enter your option: ");
     scanf("%d", &userOption);
@@ -89,7 +95,7 @@ int main(int argc, char* argv[]) {
       struct ParsingTable*   pTable             = createParsingTable();
       createParseTable(firstAndFollowSets, pTable);
 
-      struct ParseTree* parseTable = parseInputSourceCode(argv[1], pTable, firstAndFollowSets);
+      struct ParseTree* parseTable = parseSourceCode(argv[1], pTable, firstAndFollowSets);
       writeParseTreeToFile(parseTable, argv[2]);
 
       printf("\n[!]Finished parsing of input source code\n");
@@ -107,7 +113,7 @@ int main(int argc, char* argv[]) {
       struct FirstAndFollow* firstAndFollowSets = computeFirstAndFollowSets(parsedGrammar);
       struct ParsingTable*   pTable             = createParsingTable();
       createParseTable(firstAndFollowSets, pTable);
-      struct ParseTree* parseTable = parseInputSourceCode(argv[1], pTable, firstAndFollowSets);
+      parseSourceCode(argv[1], pTable, firstAndFollowSets);
 
       end_time                  = clock();
       total_CPU_time            = (double)(end_time - start_time);
