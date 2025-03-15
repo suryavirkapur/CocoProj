@@ -6,7 +6,6 @@ Group No. 46
 - Harshwardhan Sugam (2022A7PS0114P)
 */
 
-
 #ifndef FIRST_FOLLOW_H
 #define FIRST_FOLLOW_H
 
@@ -14,12 +13,12 @@ Group No. 46
 #include "grammar.h"
 
 struct FirstAndFollow* createFirstAndFollowSets();
-void computeFirstSets(int** firstVector, int enumId);
-void populateFirst(int** firstVector, struct Grammar* parsedGrammar);
-void populateFollow(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
-void populateFollowTillStable(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
+void                   computeFirstSets(int** firstVector, int enumId);
+void                   populateFirst(int** firstVector, struct Grammar* parsedGrammar);
+void                   populateFollow(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
+void                   populateFollowTillStable(int** followVector, int** firstVector, struct Grammar* parsedGrammar);
 struct FirstAndFollow* computeFirstAndFollowSets(struct Grammar* parsedGrammar);
-void verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets);
-void initialiseCheckIfDone();
+void                   verifyFirstAndFollow(struct FirstAndFollow* firstAndFollowSets);
+void                   initialiseCheckIfDone();
 
-#endif 
+#endif
