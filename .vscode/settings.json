@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "*.py": "python",
-        "*.css": "tailwindcss",
-        "grammar.h": "c"
-    }
-}

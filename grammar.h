@@ -12,8 +12,7 @@ int findInNonTerminalMap(char* str);
 int findInTerminalMap(char* str);
 char* getTerminal(int enumId);
 char* getNonTerminal(int enumId);
-void verifyGrammar();
-void verifyNTRR();
+
 
 extern struct Grammar* parsedGrammar;
 extern struct NonTerminalRuleRecords** nonTerminalRuleRecords;

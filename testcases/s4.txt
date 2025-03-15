@@ -1,0 +1,9 @@
+_testFunc input parameter list [int b2d4] output parameter list [int c3d5];
+  type int : b5d6;
+  b5d6 <--- 5;
+  return [b5d6]; end
+
+_main
+  type int : c2d3;
+  [c2d3] <--- call _testFunc with parameters [5];
+  write(c2d3); return; end

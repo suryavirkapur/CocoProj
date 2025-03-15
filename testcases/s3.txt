@@ -1,0 +1,110 @@
+% Comprehensive program with multiple features of the language
+_processData input parameter list [int c2d3, int d5b6, real b3c7]
+output parameter list [record #result d2b5];
+
+type int: c2d7;
+type int: b5d6;
+type real: c3b5;
+
+c2d7 <--- 0;
+b5d6 <--- 0;
+
+while(c2d7 < c2d3)
+  b5d6 <--- b5d6 + d5b6;
+  c2d7 <--- c2d7 + 1;
+endwhile
+
+if(b5d6 > 100)
+then
+  d2b5.status <--- 1;
+  d2b5.value <--- b5d6;
+  d2b5.message.code <--- 200;
+else
+  d2b5.status <--- 0;
+  d2b5.value <--- b5d6;
+  d2b5.message.code <--- 404;
+endif
+
+d2b5.computed <--- b5d6 * b3c7;
+return [d2b5];
+end
+
+_calculateStats input parameter list [record #dataPoint b2d3, record #dataPoint c5d6]
+output parameter list [record #stats d3b7];
+
+type record #dataPoint: c3d7;
+
+if(b2d3.value > c5d6.value)
+then
+  d3b7.max <--- b2d3.value;
+  d3b7.min <--- c5d6.value;
+else
+  d3b7.max <--- c5d6.value;
+  d3b7.min <--- b2d3.value; 
+endif
+
+d3b7.sum <--- b2d3.value + c5d6.value;
+d3b7.count <--- 2;
+d3b7.avg <--- d3b7.sum / d3b7.count;
+
+return [d3b7];
+end
+
+_main
+record #message
+  type int: code;
+  type int: details;
+endrecord
+
+record #result
+  type int: status;
+  type int: value;
+  type record #message: message;
+  type real: computed;
+endrecord
+
+record #datapoint
+  type int: value;
+  type real: score;
+endrecord
+
+record #stats
+  type int: max;
+  type int: min;
+  type int: sum;
+  type int: count;
+  type real: avg;
+endrecord
+
+definetype record #stats as #statsalias
+
+type int: c2d5;
+type int: d5c7;
+type real: b3d6;
+type record #result: c5b7;
+type record #datapoint: b4d3;
+type record #datapoint: c7d4;
+type record #stats: d6b2;
+
+c2d5 <--- 5;
+d5c7 <--- 20;
+b3d6 <--- 2.50;
+
+b4d3.value <--- 10;
+b4d3.score <--- 3.50;
+c7d4.value <--- 20;
+c7d4.score <--- 7.50;
+
+[c5b7] <--- call _processData with parameters [c2d5, d5c7, b3d6];
+[d6b2] <--- call _calculateStats with parameters [b4d3, c7d4];
+
+write(c5b7.status);
+write(c5b7.value);
+write(c5b7.computed);
+write(d6b2.max);
+write(d6b2.min);
+write(d6b2.avg);
+
+return;
+end
+

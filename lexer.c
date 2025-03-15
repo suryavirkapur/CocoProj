@@ -896,31 +896,29 @@ Token *getToken()
             while (isCharacterInRange(c, 'a', 'z'))
                 c = nextChar();
 
+            // We've now read all lowercase letters and hit a non-letter character
             lexerState = 41;
             break;
         }
         case 41:
         {
-            retract(1);
+            retract(1); // Retract to handle the non-letter character
             char *lex = duplicateSubstring(lexemeStart, forward);
+
+            // Check if it's a keyword regardless of surrounding whitespace
             struct Node *n = findKeyword(kt, lex);
             if (n == NULL)
             {
-                if (c == '\n')
-                    populateToken(t, TK_FIELDID, lex, lineCount - 1, 0, NULL);
-                else
-                    populateToken(t, TK_FIELDID, lex, lineCount, 0, NULL);
+                // Not a keyword, handle as FIELDID
+                populateToken(t, TK_FIELDID, lex, lineCount, 0, NULL);
             }
             else
             {
-                if (c == '\n')
-                    populateToken(t, n->TOKEN_NAME, lex, lineCount - 1, 0, NULL);
-                else
-                    populateToken(t, n->TOKEN_NAME, lex, lineCount, 0, NULL);
+                // It's a keyword (like "end"), set the appropriate token
+                populateToken(t, n->TOKEN_NAME, lex, lineCount, 0, NULL);
             }
             accept();
             return t;
-            break;
         }
         case 42:
         {

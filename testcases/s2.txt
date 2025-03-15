@@ -1,0 +1,36 @@
+% Program demonstrating record types and function calls
+_calculateArea input parameter list [record #rectangle b2d5]
+output parameter list [real c3d7];
+
+c3d7 <--- b2d5.length * b2d5.width;
+return [c3d7];
+end
+
+_calculatePerimeter input parameter list [record #rectangle b2d5]
+output parameter list [real d5b6];
+
+d5b6 <--- 2.00 * (b2d5.length + b2d5.width);
+return [d5b6];
+end
+
+_main
+record #rectangle
+  type real: length;
+  type real: width;
+endrecord
+
+type record #rectangle: c2d5;
+type real: c3d6;
+type real: d2b7;
+
+c2d5.length <--- 5.50;
+c2d5.width <--- 3.50;
+
+[c3d6] <--- call _calculateArea with parameters [c2d5];
+[d2b7] <--- call _calculatePerimeter with parameters [c2d5];
+
+write(c3d6);
+write(d2b7);
+
+return;
+end

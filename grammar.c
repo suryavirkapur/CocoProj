@@ -221,87 +221,6 @@ char** splitString(char* str, const char* delimiter, int* count) {
     return result;
 }
 
-void verifyGrammar() {
-    printf("Verifying grammar...\n");
-    
-    if (parsedGrammar == NULL) {
-        printf("ERROR: Grammar is NULL\n");
-        return;
-    }
-    
-    if (parsedGrammar->GRAMMAR_RULES == NULL) {
-        printf("ERROR: Grammar rules array is NULL\n");
-        return;
-    }
-    
-    printf("Grammar has %d rules\n", parsedGrammar->GRAMMAR_RULES_SIZE);
-    
-    for (int i = 1; i < parsedGrammar->GRAMMAR_RULES_SIZE; i++) {
-        struct Rule* r = parsedGrammar->GRAMMAR_RULES[i];
-        if (r == NULL) {
-            printf("ERROR: Rule %d is NULL\n", i);
-            continue;
-        }
-        
-        if (r->SYMBOLS == NULL) {
-            printf("ERROR: Symbols for rule %d is NULL\n", i);
-            continue;
-        }
-        
-        struct Symbol* head = r->SYMBOLS->HEAD_SYMBOL;
-        if (head == NULL) {
-            printf("ERROR: Head symbol for rule %d is NULL\n", i);
-            continue;
-        }
-        
-        printf("Rule %d: ", i);
-        
-        // Print the rule
-        struct Symbol* trav = head;
-        while (trav != NULL) {
-            if (trav->IS_TERMINAL) {
-                printf("%s ", getTerminal(trav->TYPE.TERMINAL));
-            } else {
-                printf("%s ", getNonTerminal(trav->TYPE.NON_TERMINAL));
-            }
-            trav = trav->next;
-        }
-        printf("\n");
-    }
-    printf("Grammar verification complete\n");
-}
-
-// why does this exist?
-// what can possibly go wrong with ntrr parsing?
-void verifyNTRR() {
-    printf("Verifying non-terminal rule records...\n");
-    
-    if (nonTerminalRuleRecords == NULL) {
-        printf("ERROR: NTRR is NULL\n");
-        return;
-    }
-    
-    for (int i = 0; i < NUM_NONTERMINALS; i++) {
-        printf("Checking non-terminal %d: %s\n", i, getNonTerminal(i));
-        if (nonTerminalRuleRecords[i] == NULL) {
-            printf("ERROR: NTRR for non-terminal %s (%d) is NULL\n", getNonTerminal(i), i);
-            continue;
-        }
-        
-        // printf("Non-terminal %s (%d): Rules %d to %d\n", getNonTerminal(i), i, nonTerminalRuleRecords[i]->start, nonTerminalRuleRecords[i]->end);
-               
-        if (nonTerminalRuleRecords[i]->start > nonTerminalRuleRecords[i]->end) {
-            printf("ERROR: Invalid rule range for non-terminal %s (%d)\n", getNonTerminal(i), i);
-        }
-        
-        if (nonTerminalRuleRecords[i]->start < 1 || nonTerminalRuleRecords[i]->end >= parsedGrammar->GRAMMAR_RULES_SIZE) {
-            printf("ERROR: Rule range out of bounds for non-terminal %s (%d)\n", getNonTerminal(i), i);
-        }
-    }
-    
-    printf("NTRR verification complete\n");
-}
-
 struct Grammar* extractGrammar() {
     int ruleCount = 1;
     int fd = open(GRAMMAR_FILE_PATH, O_RDONLY);
@@ -546,9 +465,6 @@ struct Grammar* extractGrammar() {
     if (currentNonTerminal != NULL) {
         nonTerminalRuleRecords[currentNonTerminal->TYPE.NON_TERMINAL]->end = ruleCount-1;
     }
-    
-    verifyGrammar();
-    verifyNTRR();
     
     return parsedGrammar;
 }
