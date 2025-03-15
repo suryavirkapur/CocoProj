@@ -19,7 +19,7 @@ Group No. 46
 struct Grammar*                 parsedGrammar;
 struct NonTerminalRuleRecords** nonTerminalRuleRecords;
 bool                            nonTerminalProcessed[NUM_NONTERMINALS] = {0};
-int                             symbolVectorSize                       = NUM_TERMINALS + 1;
+int                             symbolVectorSize = NUM_TERMINALS + 1;
 
 bool syntaxErrorOccurred;
 bool lexicalErrorOccurred;
@@ -30,7 +30,7 @@ char* TerminalMap[] = {
     "TK_FIELDID",    // [a-z][a-z]*
     "TK_ID",         // [b-d][2-7][b-d]*[2-7]*
     "TK_NUM",        // [0-9][0-9]*
-    "TK_RNUM",       // Real numbers (both formats)
+    "TK_RNUM",       // E or e or . or +|- or digit
     "TK_FUNID",      // _[a-z|A-Z][a-z|A-Z]*[0-9]*
     "TK_RUID",       // #[a-z][a-z]*
     "TK_WITH",       // with
@@ -88,386 +88,376 @@ char* TerminalMap[] = {
     "TK_EOF"         // End of file marker
 };
 
-char* NonTerminalMap[] = {"program",
-                          "mainFunction",
-                          "otherFunctions",
-                          "function",
-                          "input_par",
-                          "output_par",
-                          "parameterList",
-                          "dataType",
-                          "primitiveDatatype",
-                          "constructedDatatype",
-                          "moreParameters",
-                          "statementSequence",
-                          "typeDefinitions",
-                          "actualOrRedefined",
-                          "typeDefinition",
-                          "fieldDefinitions",
-                          "fieldDefinition",
-                          "fieldDataType",
-                          "remainingFields",
-                          "declarations",
-                          "declaration",
-                          "globalSpecifier",
-                          "otherStmts",
-                          "statement",
-                          "assignmentStmt",
-                          "singleOrRecId",
-                          "constructedVariable",
-                          "oneExpansion",
-                          "moreExpansions",
-                          "optionalFieldAccess",
-                          "funCallStmt",
-                          "outputParameters",
-                          "inputParameters",
-                          "iterativeStmt",
-                          "conditionalStmt",
-                          "elsePart",
-                          "ioStmt",
-                          "arithmeticExpression",
-                          "expPrime",
-                          "term",
-                          "termPrime",
-                          "factor",
-                          "highPrecedenceOperators",
-                          "lowPrecedenceOperators",
-                          "booleanExpression",
-                          "variable",
-                          "logicalOp",
-                          "relationalOp",
-                          "returnStmt",
-                          "optionalReturn",
-                          "idList",
-                          "remainingIdentifiers",
-                          "typeAliasStatement",
-                          "recordOrUnion"};
+char* NonTerminalMap[] = {
+    "program",
+    "mainFunction",
+    "otherFunctions",
+    "function",
+    "input_par",
+    "output_par",
+    "parameterList",
+    "dataType",
+    "primitiveDatatype",
+    "constructedDatatype",
+    "moreParameters",
+    "statementSequence",
+    "typeDefinitions",
+    "actualOrRedefined",
+    "typeDefinition",
+    "fieldDefinitions",
+    "fieldDefinition",
+    "fieldDataType",
+    "remainingFields",
+    "declarations",
+    "declaration",
+    "globalSpecifier",
+    "otherStmts",
+    "statement",
+    "assignmentStmt",
+    "singleOrRecId",
+    "constructedVariable",
+    "oneExpansion",
+    "moreExpansions",
+    "optionalFieldAccess",
+    "funCallStmt",
+    "outputParameters",
+    "inputParameters",
+    "iterativeStmt",
+    "conditionalStmt",
+    "elsePart",
+    "ioStmt",
+    "arithmeticExpression",
+    "expPrime",
+    "term",
+    "termPrime",
+    "factor",
+    "highPrecedenceOperators",
+    "lowPrecedenceOperators",
+    "booleanExpression",
+    "variable",
+    "logicalOp",
+    "relationalOp",
+    "returnStmt",
+    "optionalReturn",
+    "idList",
+    "remainingIdentifiers",
+    "typeAliasStatement",
+    "recordOrUnion"
+};
 
 int findInTerminalMap(char* str) {
-  if (str == NULL) return -1;
-
-  for (int i = 0; i < NUM_TERMINALS; i++) {
-    if (TerminalMap[i] != NULL && strcmp(str, TerminalMap[i]) == 0) { return i; }
-  }
-
-  return -1;
+    if (str == NULL) return -1;
+    for (int i = 0; i < NUM_TERMINALS; i++) {
+        if (TerminalMap[i] != NULL && strcmp(str, TerminalMap[i]) == 0)
+            return i;
+    }
+    return -1;
 }
 
 int findInNonTerminalMap(char* str) {
-  if (str == NULL) return -1;
-
-  for (int i = 0; i < NUM_NONTERMINALS; i++) {
-    if (NonTerminalMap[i] != NULL && strcmp(str, NonTerminalMap[i]) == 0) return i;
-  }
-  return -1;
+    if (str == NULL) return -1;
+    for (int i = 0; i < NUM_NONTERMINALS; i++) {
+        if (NonTerminalMap[i] != NULL && strcmp(str, NonTerminalMap[i]) == 0)
+            return i;
+    }
+    return -1;
 }
 
 char* getTerminal(int mapIndex) {
-  return TerminalMap[mapIndex];
+    return TerminalMap[mapIndex];
 }
 
 char* getNonTerminal(int mapIndex) {
-  return NonTerminalMap[mapIndex];
+    return NonTerminalMap[mapIndex];
 }
 
-int initializeGrammar() {
-  parsedGrammar                     = (struct Grammar*)malloc(sizeof(struct Grammar));
-  parsedGrammar->GRAMMAR_RULES_SIZE = NUM_GRAMMAR_RULES + 1;
-  parsedGrammar->GRAMMAR_RULES      = (struct Rule**)malloc(sizeof(struct Rule*) * parsedGrammar->GRAMMAR_RULES_SIZE);
-  parsedGrammar->GRAMMAR_RULES[0]   = NULL;
-  return 0;
+int setupGrammar() {
+    parsedGrammar = (struct Grammar*)malloc(sizeof(struct Grammar));
+    if (parsedGrammar == NULL) {
+        fprintf(stderr, "ERROR: Memory allocation failed for grammar\n");
+        return -1;
+    }
+    parsedGrammar->GRAMMAR_RULES_SIZE = NUM_GRAMMAR_RULES + 1;
+    parsedGrammar->GRAMMAR_RULES = (struct Rule**)malloc(sizeof(struct Rule*) * parsedGrammar->GRAMMAR_RULES_SIZE);
+    if (parsedGrammar->GRAMMAR_RULES == NULL) {
+        fprintf(stderr, "ERROR: Memory allocation failed for grammar rules\n");
+        free(parsedGrammar);
+        return -1;
+    }
+    parsedGrammar->GRAMMAR_RULES[0] = NULL;
+    return 0;
 }
 
-struct Rule* initializeRule(struct SymbolList* sl, int ruleCount) {
-  struct Rule* rule = (struct Rule*)malloc(sizeof(struct Rule));
-  rule->symbols     = sl;
-  rule->ruleNum     = ruleCount;
-  return rule;
+struct Rule* setupRule(struct SymbolList* sl, int ruleCount) {
+    struct Rule* rule = (struct Rule*)malloc(sizeof(struct Rule));
+    if (rule == NULL) {
+        fprintf(stderr, "ERROR: Memory allocation failed for rule\n");
+        return NULL;
+    }
+    rule->symbols = sl;
+    rule->ruleNum = ruleCount;
+    return rule;
 }
 
-struct NonTerminalRuleRecords** initializeNonTerminalRecords() {
-  struct NonTerminalRuleRecords** nonTerminalRuleRecords =
-      (struct NonTerminalRuleRecords**)malloc(sizeof(struct NonTerminalRuleRecords*) * NUM_NONTERMINALS);
-  return nonTerminalRuleRecords;
+struct NonTerminalRuleRecords** setupNonTerminalRecords() {
+    struct NonTerminalRuleRecords** records = (struct NonTerminalRuleRecords**)malloc(sizeof(struct NonTerminalRuleRecords*) * NUM_NONTERMINALS);
+    if (records == NULL) {
+        fprintf(stderr, "ERROR: Memory allocation failed for NonTerminalRuleRecords\n");
+        exit(EXIT_FAILURE);
+    }
+    return records;
 }
 
 void initialiseCheckOnDone() {
-  for (int i = 0; i < NUM_NONTERMINALS; i++) nonTerminalProcessed[i] = 0;
+    for (int i = 0; i < NUM_NONTERMINALS; i++)
+        nonTerminalProcessed[i] = false;
 }
 
 char* trimWhitespace(char* str) {
-  char* end;
-  while (isspace((unsigned char)*str)) str++;
-  if (*str == 0) return str;
-  end = str + strlen(str) - 1;
-  while (end > str && isspace((unsigned char)*end)) end--;
-  end[1] = '\0';
-  return str;
+    if (str == NULL)
+        return NULL;
+    while (isspace((unsigned char)*str))
+        str++;
+    if (*str == 0)
+        return str;
+    char* end = str + strlen(str) - 1;
+    while (end > str && isspace((unsigned char)*end))
+        end--;
+    end[1] = '\0';
+    return str;
 }
 
 char** splitString(char* str, const char* delimiter, int* count) {
-  char** result = NULL;
-  char*  token  = strtok(str, delimiter);
-  *count        = 0;
-
-  while (token != NULL) {
-    result = realloc(result, sizeof(char*) * (*count + 1));
-    if (result == NULL) {
-      perror("realloc");
-      exit(EXIT_FAILURE);
+    if (str == NULL || delimiter == NULL || count == NULL) {
+        fprintf(stderr, "ERROR: NULL parameter in splitString\n");
+        return NULL;
     }
-    result[*count] = trimWhitespace(strdup(token));
-    (*count)++;
-    token = strtok(NULL, delimiter);
-  }
-  return result;
+    char** result = NULL;
+    char* token = strtok(str, delimiter);
+    *count = 0;
+    while (token != NULL) {
+        result = realloc(result, sizeof(char*) * (*count + 1));
+        if (result == NULL) {
+            perror("realloc");
+            exit(EXIT_FAILURE);
+        }
+        result[*count] = trimWhitespace(strdup(token));
+        (*count)++;
+        token = strtok(NULL, delimiter);
+    }
+    return result;
 }
 
 struct Grammar* extractGrammar() {
-  int ruleCount = 1;
-  int fd        = open(GRAMMAR_FILE_PATH, O_RDONLY);
-  if (fd < 0) {
-    printf("ERROR: Failed to open grammar file %s\n", GRAMMAR_FILE_PATH);
-    exit(1);
-  }
+    int ruleCount = 1;
+    int fd = open(GRAMMAR_FILE_PATH, O_RDONLY);
+    if (fd < 0) {
+        fprintf(stderr, "ERROR: Failed to open grammar file %s\n", GRAMMAR_FILE_PATH);
+        exit(EXIT_FAILURE);
+    }
 
-  char  c;
-  int   actualRead;
-  char* symbol = (char*)malloc(1); // Initialize with empty string
-  if (symbol == NULL) {
-    printf("ERROR: Memory allocation failed\n");
-    close(fd);
-    exit(1);
-  }
-
-  symbol[0]                             = '\0';
-  int                symbolsRead        = 0;
-  struct Symbol*     currentNonTerminal = NULL;
-  struct SymbolList* sl                 = NULL;
-
-  initializeGrammar();
-  nonTerminalRuleRecords = initializeNonTerminalRecords();
-  initialiseCheckOnDone();
-
-  while ((actualRead = read(fd, &c, sizeof(char))) > 0) {
-    if (c == ' ' || c == '\t') {
-      if (strlen(symbol) > 0) {
-        symbolsRead++;
-
-        // Handle symbol correctly
-        struct Symbol* s;
-        if (strcmp(symbol, "eps") == 0) {
-          s = (struct Symbol*)malloc(sizeof(struct Symbol));
-          if (s == NULL) {
-            printf("ERROR: Memory allocation failed\n");
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-          s->symType.TERMINAL = TK_EPS;
-          s->isTerminal       = 1;
-          s->next             = NULL;
-        } else {
-          s = initializeSymbol(symbol);
-          if (s == NULL) {
-            printf("ERROR: Failed to initialize symbol %s\n", symbol);
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-        }
-
-        // Add to symbol list
-        if (sl == NULL) {
-          sl = initializeSymbolList();
-          if (sl == NULL) {
-            printf("ERROR: Failed to initialize symbol list\n");
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-        }
-
-        addToSymbolList(sl, s);
-
-        if (symbolsRead == 1) {
-          if (currentNonTerminal == NULL) {
-            if (s->isTerminal == 1) {
-              printf("ERROR: First symbol in rule cannot be a terminal: %s\n", symbol);
-              free(symbol);
-              close(fd);
-              exit(1);
-            }
-
-            nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
-                (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-            if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
-              printf("ERROR: Memory allocation failed for NTRR\n");
-              free(symbol);
-              close(fd);
-              exit(1);
-            }
-            nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
-          } else if (currentNonTerminal->symType.NON_TERMINAL != s->symType.NON_TERMINAL) {
-            nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
-            nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
-                (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
-            if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
-              printf("ERROR: Memory allocation failed for NTRR\n");
-              free(symbol);
-              close(fd);
-              exit(1);
-            }
-            nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
-          }
-          currentNonTerminal = s;
-        }
-
-        // Reset symbol
-        free(symbol);
-        symbol = (char*)malloc(1);
-        if (symbol == NULL) {
-          printf("ERROR: Memory allocation failed\n");
-          close(fd);
-          exit(1);
-        }
-        symbol[0] = '\0';
-      }
-    } else if (c == '\n' || c == '\r') {
-      if (strlen(symbol) > 0) {
-        // Process the last symbol on the line
-        struct Symbol* s;
-        if (strcmp(symbol, "eps") == 0) {
-          s = (struct Symbol*)malloc(sizeof(struct Symbol));
-          if (s == NULL) {
-            printf("ERROR: Memory allocation failed\n");
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-          s->symType.TERMINAL = TK_EPS;
-          s->isTerminal       = 1;
-          s->next             = NULL;
-        } else {
-          s = initializeSymbol(symbol);
-          if (s == NULL) {
-            printf("ERROR: Failed to initialize symbol %s\n", symbol);
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-        }
-
-        if (sl == NULL) {
-          sl = initializeSymbolList();
-          if (sl == NULL) {
-            printf("ERROR: Failed to initialize symbol list\n");
-            free(symbol);
-            close(fd);
-            exit(1);
-          }
-        }
-
-        addToSymbolList(sl, s);
-
-        // Create the rule and add it to the grammar
-        struct Rule* rule = initializeRule(sl, ruleCount);
-        if (rule == NULL) {
-          printf("ERROR: Failed to initialize rule\n");
-          free(symbol);
-          close(fd);
-          exit(1);
-        }
-
-        parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
-        ruleCount++;
-
-        // Reset for next line
-        symbolsRead = 0;
-        free(symbol);
-        symbol = (char*)malloc(1);
-        if (symbol == NULL) {
-          printf("ERROR: Memory allocation failed\n");
-          close(fd);
-          exit(1);
-        }
-        symbol[0] = '\0';
-        sl        = NULL;
-      }
-
-      // Skip any additional newline characters
-      if (c == '\r') {
-        char nextChar;
-        if (read(fd, &nextChar, sizeof(char)) > 0 && nextChar != '\n') {
-          lseek(fd, -1, SEEK_CUR); // Move back if not followed by '\n'
-        }
-      }
-    } else {
-      // We're reading a symbol character
-      if (symbolsRead == 0 && sl == NULL) {
-        sl = initializeSymbolList();
-        if (sl == NULL) {
-          printf("ERROR: Failed to initialize symbol list\n");
-          free(symbol);
-          close(fd);
-          exit(1);
-        }
-      }
-
-      // Append character to symbol
-      char* newSymbol = (char*)malloc(strlen(symbol) + 2);
-      if (newSymbol == NULL) {
-        printf("ERROR: Memory allocation failed\n");
-        free(symbol);
+    char c;
+    int actualRead;
+    /* Use a dynamic buffer for the current symbol with an initial capacity */
+    size_t bufSize = 64;
+    char* symbol = (char*)malloc(bufSize);
+    if (symbol == NULL) {
+        fprintf(stderr, "ERROR: Memory allocation failed\n");
         close(fd);
-        exit(1);
-      }
-      strcpy(newSymbol, symbol);
-      newSymbol[strlen(symbol)]     = c;
-      newSymbol[strlen(symbol) + 1] = '\0';
-      free(symbol);
-      symbol = newSymbol;
+        exit(EXIT_FAILURE);
     }
-  }
+    symbol[0] = '\0';
 
-  // Process any remaining symbol at EOF
-  if (symbol != NULL && strlen(symbol) > 0) {
-    struct Symbol* s;
-    if (strcmp(symbol, "eps") == 0) {
-      s = (struct Symbol*)malloc(sizeof(struct Symbol));
-      if (s != NULL) {
-        s->symType.TERMINAL = TK_EPS;
-        s->isTerminal       = 1;
-        s->next             = NULL;
+    int symbolsRead = 0;
+    struct Symbol* currentNonTerminal = NULL;
+    struct SymbolList* sl = NULL;
 
-        if (sl != NULL) {
-          addToSymbolList(sl, s);
-          struct Rule* rule = initializeRule(sl, ruleCount);
-          if (rule != NULL) {
-            parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
-            ruleCount++;
-          }
+    setupGrammar();
+    nonTerminalRuleRecords = setupNonTerminalRecords();
+    initialiseCheckOnDone();
+
+    while ((actualRead = read(fd, &c, sizeof(char))) > 0) {
+        if (c == ' ' || c == '\t') {
+            if (strlen(symbol) > 0) {
+                symbolsRead++;
+                struct Symbol* s;
+                if (strcmp(symbol, "eps") == 0) {
+                    s = (struct Symbol*)malloc(sizeof(struct Symbol));
+                    if (s == NULL) {
+                        fprintf(stderr, "ERROR: Memory allocation failed\n");
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                    s->symType.TERMINAL = TK_EPS;
+                    s->isTerminal = true;
+                    s->next = NULL;
+                } else {
+                    s = initializeSymbol(symbol);
+                    if (s == NULL) {
+                        fprintf(stderr, "ERROR: Failed to initialize symbol %s\n", symbol);
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                if (sl == NULL) {
+                    sl = initializeSymbolList();
+                    if (sl == NULL) {
+                        fprintf(stderr, "ERROR: Failed to initialize symbol list\n");
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                addToSymbolList(sl, s);
+
+                if (symbolsRead == 1) {
+                    if (currentNonTerminal == NULL) {
+                        if (s->isTerminal == true) {
+                            fprintf(stderr, "ERROR: First symbol in rule cannot be a terminal: %s\n", symbol);
+                            free(symbol);
+                            close(fd);
+                            exit(EXIT_FAILURE);
+                        }
+                        nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
+                            (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
+                        if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
+                            fprintf(stderr, "ERROR: Memory allocation failed for NonTerminalRuleRecords\n");
+                            free(symbol);
+                            close(fd);
+                            exit(EXIT_FAILURE);
+                        }
+                        nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
+                    } else if (currentNonTerminal->symType.NON_TERMINAL != s->symType.NON_TERMINAL) {
+                        nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
+                        nonTerminalRuleRecords[s->symType.NON_TERMINAL] =
+                            (struct NonTerminalRuleRecords*)malloc(sizeof(struct NonTerminalRuleRecords));
+                        if (nonTerminalRuleRecords[s->symType.NON_TERMINAL] == NULL) {
+                            fprintf(stderr, "ERROR: Memory allocation failed for NonTerminalRuleRecords\n");
+                            free(symbol);
+                            close(fd);
+                            exit(EXIT_FAILURE);
+                        }
+                        nonTerminalRuleRecords[s->symType.NON_TERMINAL]->start = ruleCount;
+                    }
+                    currentNonTerminal = s;
+                }
+                /* Reset the symbol buffer instead of freeing and reallocating */
+                symbol[0] = '\0';
+            }
+        } else if (c == '\n' || c == '\r') {
+            if (strlen(symbol) > 0) {
+                struct Symbol* s;
+                if (strcmp(symbol, "eps") == 0) {
+                    s = (struct Symbol*)malloc(sizeof(struct Symbol));
+                    if (s == NULL) {
+                        fprintf(stderr, "ERROR: Memory allocation failed\n");
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                    s->symType.TERMINAL = TK_EPS;
+                    s->isTerminal = true;
+                    s->next = NULL;
+                } else {
+                    s = initializeSymbol(symbol);
+                    if (s == NULL) {
+                        fprintf(stderr, "ERROR: Failed to initialize symbol %s\n", symbol);
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                if (sl == NULL) {
+                    sl = initializeSymbolList();
+                    if (sl == NULL) {
+                        fprintf(stderr, "ERROR: Failed to initialize symbol list\n");
+                        free(symbol);
+                        close(fd);
+                        exit(EXIT_FAILURE);
+                    }
+                }
+                addToSymbolList(sl, s);
+                struct Rule* rule = setupRule(sl, ruleCount);
+                if (rule == NULL) {
+                    fprintf(stderr, "ERROR: Failed to initialize rule\n");
+                    free(symbol);
+                    close(fd);
+                    exit(EXIT_FAILURE);
+                }
+                parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
+                ruleCount++;
+                symbolsRead = 0;
+                symbol[0] = '\0';
+                sl = NULL;
+            }
+            if (c == '\r') {
+                char nextChar;
+                if (read(fd, &nextChar, sizeof(char)) > 0 && nextChar != '\n') {
+                    lseek(fd, -1, SEEK_CUR);
+                }
+            }
+        } else {
+            if (symbolsRead == 0 && sl == NULL) {
+                sl = initializeSymbolList();
+                if (sl == NULL) {
+                    fprintf(stderr, "ERROR: Failed to initialize symbol list\n");
+                    free(symbol);
+                    close(fd);
+                    exit(EXIT_FAILURE);
+                }
+            }
+            size_t len = strlen(symbol);
+            /* Expand the buffer if necessary */
+            if (len + 2 > bufSize) {
+                bufSize *= 2;
+                char* temp = realloc(symbol, bufSize);
+                if (temp == NULL) {
+                    fprintf(stderr, "ERROR: Memory allocation failed\n");
+                    free(symbol);
+                    close(fd);
+                    exit(EXIT_FAILURE);
+                }
+                symbol = temp;
+            }
+            symbol[len] = c;
+            symbol[len + 1] = '\0';
         }
-      }
-    } else {
-      s = initializeSymbol(symbol);
-      if (s != NULL && sl != NULL) {
-        addToSymbolList(sl, s);
-        struct Rule* rule = initializeRule(sl, ruleCount);
-        if (rule != NULL) {
-          parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
-          ruleCount++;
-        }
-      }
     }
-  }
-
-  free(symbol);
-  close(fd);
-
-  if (currentNonTerminal != NULL) {
-    nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
-  }
-
-  return parsedGrammar;
+    if (symbol != NULL && strlen(symbol) > 0) {
+        struct Symbol* s;
+        if (strcmp(symbol, "eps") == 0) {
+            s = (struct Symbol*)malloc(sizeof(struct Symbol));
+            if (s != NULL) {
+                s->symType.TERMINAL = TK_EPS;
+                s->isTerminal = true;
+                s->next = NULL;
+                if (sl != NULL) {
+                    addToSymbolList(sl, s);
+                    struct Rule* rule = setupRule(sl, ruleCount);
+                    if (rule != NULL) {
+                        parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
+                        ruleCount++;
+                    }
+                }
+            }
+        } else {
+            s = initializeSymbol(symbol);
+            if (s != NULL && sl != NULL) {
+                addToSymbolList(sl, s);
+                struct Rule* rule = setupRule(sl, ruleCount);
+                if (rule != NULL) {
+                    parsedGrammar->GRAMMAR_RULES[ruleCount] = rule;
+                    ruleCount++;
+                }
+            }
+        }
+    }
+    free(symbol);
+    close(fd);
+    if (currentNonTerminal != NULL) {
+        nonTerminalRuleRecords[currentNonTerminal->symType.NON_TERMINAL]->end = ruleCount - 1;
+    }
+    return parsedGrammar;
 }

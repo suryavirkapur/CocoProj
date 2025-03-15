@@ -12,14 +12,19 @@ Group No. 46
 #include "dataStructures.h"
 #include <stdbool.h>
 
-int                             initializeGrammar();
+int                             setupGrammar();
 struct Grammar*                 extractGrammar();
-struct NonTerminalRuleRecords** initializeNonTerminalRecords();
-struct Rule*                    initializeRule(struct SymbolList* sl, int ruleCount);
-int                             findInNonTerminalMap(char* str);
-int                             findInTerminalMap(char* str);
+
+
+struct Rule*                    setupRule(struct SymbolList* sl, int ruleCount);
+
+
 char*                           getTerminal(int mapIndex);
 char*                           getNonTerminal(int mapIndex);
+
+int                             findInNonTerminalMap(char* str);
+int                             findInTerminalMap(char* str);
+
 
 extern struct Grammar*                 parsedGrammar;
 extern struct NonTerminalRuleRecords** nonTerminalRuleRecords;

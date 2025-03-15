@@ -5,6 +5,7 @@ Group No. 46
 - Anagh Goyal (2022A7PS0177U)
 - Harshwardhan Sugam (2022A7PS0114P)
 */
+
 #ifndef PARSE_H
 #define PARSE_H
 
@@ -14,12 +15,10 @@ Group No. 46
 #include <stdio.h>
 
 struct ParsingTable* createParsingTable();
-void                 createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable);
-struct ParseTree*
-     parseSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
+void createParseTable(struct FirstAndFollow* firstAndFollowSets, struct ParsingTable* parseTable);
+struct ParseTree* parseSourceCode(char* testcaseFile, struct ParsingTable* pTable, struct FirstAndFollow* firstAndFollowSets);
 void writeParseTreeToFile(struct ParseTree* parseTable, char* outputFile);
 void printParseTable(struct NaryTreeNode* parseTable, FILE* f);
-int  getErrorStatus();
-int  isSynchronizingToken(TokenName token);
+int isSynchronizingToken(TokenName token);
 
 #endif
